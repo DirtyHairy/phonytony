@@ -1,14 +1,10 @@
 #include <Arduino.h>
+#include <SPI.h>
 #include <SD.h>
-#include <FS.h>
 #include <driver/i2s.h>
-#include <sd_diskio.h>
 #include <freertos/queue.h>
 #include <freertos/task.h>
-#include <cmath>
-#include <Adafruit_SSD1351.h>
-#include <Adafruit_GFX.h>
-#include <MFRC522.h>
+#include <mad.h>
 
 #define PIN_POWER       GPIO_NUM_27
 #define PIN_CS_SD       GPIO_NUM_5
@@ -27,7 +23,6 @@
 #define PLAYBACK_CHUNK_SIZE 1024
 #define PLAYBACK_QUEUE_SIZE 8
 
-static SPIClass spiHSPI(HSPI);
 static SPIClass spiVSPI(VSPI);
 
 bool probeSd() {
@@ -59,7 +54,8 @@ bool probeSd() {
     root.close();
 
     return true;
- }
+}
+
 
 void fsStreamThread(void* payload) {
     void* buffer = malloc(PLAYBACK_CHUNK_SIZE);
@@ -83,6 +79,8 @@ void audioThread(void* payload) {
         Serial.println("unable to open test.wav from SD");
         return;
     }
+
+    Serial.println("Playback started");
 
     file.seek(44);
 
@@ -112,47 +110,12 @@ void audioThread(void* payload) {
     }
 }
 
-void runDisplay() {
-    Adafruit_SSD1351 tft = Adafruit_SSD1351(128, 128, &spiHSPI, PIN_CS_OLED, PIN_DC_OLED);
-    tft.begin(SPI_FREQ_OLED);
-
-    tft.fillScreen(0);
-
-    while (true) {
-        int r = rand();
-        int x0 = r & 0x7f, y0 = (r >> 7) & 0x7f, x1 = (r >> 14) & 0x7f, y1 = (r >> 21) & 0x7f;
-        r = rand();
-
-        tft.drawLine(x0, y0, x1, y1, tft.color565((r & 0xff) % 99, ((r >> 8) & 0xff) % 99, ((r >> 16) & 0xff) % 99));
-
-        taskYIELD();
-    }
-}
-
 void setup() {
     Serial.begin(115200);
-    Serial.println("power on");
-    pinMode(PIN_POWER, OUTPUT);
-    digitalWrite(PIN_POWER, 0);
 
-    delay(250);
-
-    pinMode(PIN_CS_RFID, OUTPUT);
-    pinMode(PIN_RESET, OUTPUT);
-    pinMode(PIN_CS_SD, OUTPUT);
-
-    digitalWrite(PIN_RESET, 0);
-    digitalWrite(PIN_CS_RFID, 1);
-    digitalWrite(PIN_CS_SD, 1);
-    digitalWrite(PIN_CS_OLED, 1);
-
-    delay(1);
-
-    digitalWrite(PIN_RESET, 1);
-    spiHSPI.begin();
-    spiVSPI.begin();
-
-    delay(1);
+    if (!probeSd()) {
+        return;
+    }
 
     const i2s_config_t i2s_config = {
         .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX),
@@ -179,31 +142,12 @@ void setup() {
     i2s_set_clk(I2S_NUM_0, 44100, I2S_BITS_PER_SAMPLE_16BIT, I2S_CHANNEL_STEREO);
     i2s_stop(I2S_NUM_0);
 
-    // Serial.begin(115200);
-    Serial.println("Hello world!");
-
-    if (!probeSd()) {
-        return;
-    }
-
     TaskHandle_t audioTask;
     xTaskCreatePinnedToCore(audioThread, "playback", 4098, NULL, 10, &audioTask, 1);
-
-   runDisplay();
-
-/*
-  MFRC522 mfrc522 = MFRC522(PIN_CS_RFID, MFRC522::UNUSED_PIN, spiHSPI);
-  mfrc522.PCD_Init();
-
-  delay(500);
-
-  mfrc522.PCD_DumpVersionToSerial();
-
-  if (mfrc522.PCD_PerformSelfTest()) {
-      Serial.println("MFRC522 self test succeeded.");
-  } else {
-      Serial.println("MFRC522 self test failed.");
-  }*/
 }
 
-void loop() {}
+void loop() {
+    Serial.println("Hello world!");
+
+    delay(1000);
+}
