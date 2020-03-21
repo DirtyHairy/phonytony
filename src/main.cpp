@@ -6,6 +6,8 @@
 #include <freertos/task.h>
 #include <mad.h>
 
+#include "MadDecoder.hxx"
+
 #define PIN_POWER       GPIO_NUM_27
 #define PIN_CS_SD       GPIO_NUM_5
 #define PIN_CS_OLED     GPIO_NUM_15
@@ -57,7 +59,7 @@ bool probeSd() {
 }
 
 
-void fsStreamThread(void* payload) {
+void i2sStreamTask(void* payload) {
     void* buffer = malloc(PLAYBACK_CHUNK_SIZE);
 
     i2s_start(I2S_NUM_0);
@@ -72,34 +74,32 @@ void fsStreamThread(void* payload) {
     }
 }
 
-void audioThread(void* payload) {
-    File file = SD.open("/test.wav");
+void audioTask_() {
+    MadDecoder decoder;
 
-    if (!file) {
-        Serial.println("unable to open test.wav from SD");
+    if (!decoder.open("/test.mp3")) {
+        Serial.println("unable to open decoder");
         return;
     }
 
-    Serial.println("Playback started");
-
-    file.seek(44);
-
     int16_t* buffer = (int16_t*)malloc(PLAYBACK_CHUNK_SIZE);
-
     QueueHandle_t audioQueue = xQueueCreate(PLAYBACK_QUEUE_SIZE, PLAYBACK_CHUNK_SIZE);
 
     TaskHandle_t task;
-    xTaskCreatePinnedToCore(fsStreamThread, "fsstream", 1024, (void*)&audioQueue, 1, &task, 1);
+    xTaskCreatePinnedToCore(i2sStreamTask, "i2sstream", 1024, (void*)&audioQueue, 1, &task, 1);
 
-    size_t bytes_read = 0;
-    size_t bytes_written;
+    size_t samplesDecoded = 0;
 
     while (true) {
-        size_t bytes_read = file.read((uint8_t*)buffer, PLAYBACK_CHUNK_SIZE);
+        samplesDecoded = 0;
 
-        if (bytes_read < PLAYBACK_CHUNK_SIZE) {
-            file.seek(44);
-            file.read((uint8_t*)buffer + bytes_read, PLAYBACK_CHUNK_SIZE - bytes_read);
+        while (samplesDecoded < PLAYBACK_CHUNK_SIZE/4) {
+            samplesDecoded += decoder.decode(buffer, (PLAYBACK_CHUNK_SIZE/4 - samplesDecoded));
+
+            if (decoder.isFinished() && !decoder.open("/test.mp3")) {
+                Serial.println("failed to reinitialize decoder");
+                return;
+            }
         }
 
         for (int i = 0; i < PLAYBACK_CHUNK_SIZE / 2; i++) {
@@ -109,6 +109,13 @@ void audioThread(void* payload) {
         xQueueSend(audioQueue, (void*)buffer, portMAX_DELAY);
     }
 }
+
+
+void audioTask(void* payload) {
+    audioTask_();
+    vTaskDelete(NULL);
+}
+
 
 void setup() {
     Serial.begin(115200);
@@ -142,12 +149,9 @@ void setup() {
     i2s_set_clk(I2S_NUM_0, 44100, I2S_BITS_PER_SAMPLE_16BIT, I2S_CHANNEL_STEREO);
     i2s_stop(I2S_NUM_0);
 
-    TaskHandle_t audioTask;
-    xTaskCreatePinnedToCore(audioThread, "playback", 4098, NULL, 10, &audioTask, 1);
+    TaskHandle_t audioTaskHandle;
+    xTaskCreatePinnedToCore(audioTask, "playback", 0xA000, NULL, 10, &audioTaskHandle, 1);
 }
 
 void loop() {
-    Serial.println("Hello world!");
-
-    delay(1000);
 }
