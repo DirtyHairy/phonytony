@@ -47,6 +47,16 @@ class MadDecoder {
 
         bool initialized;
         bool finished;
+
+    private:
+
+        MadDecoder(const MadDecoder&) = delete;
+
+        MadDecoder(MadDecoder&&) = delete;
+
+        MadDecoder& operator=(const MadDecoder&) = delete;
+
+        MadDecoder& operator=(MadDecoder&&) = delete;
 };
 
 #endif

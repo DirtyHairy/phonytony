@@ -7,6 +7,7 @@
 #include <mad.h>
 
 #include "MadDecoder.hxx"
+#include "Mp3DirectoryReader.hxx"
 
 #define PIN_POWER       GPIO_NUM_27
 #define PIN_CS_SD       GPIO_NUM_5
@@ -35,25 +36,11 @@ bool probeSd() {
 
     Serial.println("SD card initialized OK");
 
-    File root = SD.open("/");
-    if (!root) {
-        Serial.println("unable to open SD root");
-        return false;
-    }
+    Mp3DirectoryReader reader;
+    reader.open("/album");
 
-    if (!root.isDirectory()){
-        Serial.println("not a directory");
-        root.close();
-        return false;
-    }
-
-    File file;
-    while (file = root.openNextFile()) {
-        Serial.printf("file: %s\n", file.name());
-        file.close();
-    }
-
-    root.close();
+    for (uint32_t i = 0; i < reader.getLength(); i++)
+        Serial.println(reader.getSortedMp3s()[i]);
 
     return true;
 }
@@ -103,7 +90,7 @@ void audioTask_() {
         }
 
         for (int i = 0; i < PLAYBACK_CHUNK_SIZE / 2; i++) {
-            buffer[i] /= 3;
+            buffer[i] /= 10;
         }
 
         xQueueSend(audioQueue, (void*)buffer, portMAX_DELAY);
@@ -119,10 +106,6 @@ void audioTask(void* payload) {
 
 void setup() {
     Serial.begin(115200);
-
-    if (!probeSd()) {
-        return;
-    }
 
     const i2s_config_t i2s_config = {
         .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX),
@@ -148,6 +131,10 @@ void setup() {
     i2s_set_pin(I2S_NUM_0, &i2s_pins);
     i2s_set_clk(I2S_NUM_0, 44100, I2S_BITS_PER_SAMPLE_16BIT, I2S_CHANNEL_STEREO);
     i2s_stop(I2S_NUM_0);
+
+    if (!probeSd()) {
+        return;
+    }
 
     TaskHandle_t audioTaskHandle;
     xTaskCreatePinnedToCore(audioTask, "playback", 0xA000, NULL, 10, &audioTaskHandle, 1);
