@@ -6,8 +6,7 @@
 #include <freertos/task.h>
 #include <mad.h>
 
-#include "MadDecoder.hxx"
-#include "Mp3DirectoryReader.hxx"
+#include "DirectoryPlayer.hxx"
 
 #define PIN_POWER       GPIO_NUM_27
 #define PIN_CS_SD       GPIO_NUM_5
@@ -36,12 +35,6 @@ bool probeSd() {
 
     Serial.println("SD card initialized OK");
 
-    Mp3DirectoryReader reader;
-    reader.open("/album");
-
-    for (uint32_t i = 0; i < reader.getLength(); i++)
-        Serial.println(reader.getSortedMp3s()[i]);
-
     return true;
 }
 
@@ -62,10 +55,10 @@ void i2sStreamTask(void* payload) {
 }
 
 void audioTask_() {
-    MadDecoder decoder;
+    DirectoryPlayer player;
 
-    if (!decoder.open("/test.mp3")) {
-        Serial.println("unable to open decoder");
+    if (!player.open("/album")) {
+        Serial.println("unable to open /album");
         return;
     }
 
@@ -81,16 +74,13 @@ void audioTask_() {
         samplesDecoded = 0;
 
         while (samplesDecoded < PLAYBACK_CHUNK_SIZE/4) {
-            samplesDecoded += decoder.decode(buffer, (PLAYBACK_CHUNK_SIZE/4 - samplesDecoded));
+            samplesDecoded += player.decode(buffer, (PLAYBACK_CHUNK_SIZE/4 - samplesDecoded));
 
-            if (decoder.isFinished() && !decoder.open("/test.mp3")) {
-                Serial.println("failed to reinitialize decoder");
-                return;
-            }
+            if (player.isFinished()) player.rewind();
         }
 
         for (int i = 0; i < PLAYBACK_CHUNK_SIZE / 2; i++) {
-            buffer[i] /= 10;
+            buffer[i] /= 5;
         }
 
         xQueueSend(audioQueue, (void*)buffer, portMAX_DELAY);

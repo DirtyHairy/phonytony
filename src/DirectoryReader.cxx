@@ -1,7 +1,7 @@
 #include <SD.h>
 #include <algorithm>
 
-#include "Mp3DirectoryReader.hxx"
+#include "DirectoryReader.hxx"
 
 namespace {
     bool isMp3(const char* name) {
@@ -37,26 +37,26 @@ namespace {
     }
 }
 
-Mp3DirectoryReader::Mp3DirectoryReader() :
+DirectoryReader::DirectoryReader() :
     buffer(nullptr),
-    sortedMp3s(nullptr),
+    playlist(nullptr),
     length(0)
 {}
 
-Mp3DirectoryReader::~Mp3DirectoryReader() {
+DirectoryReader::~DirectoryReader() {
     close();
 }
 
-void Mp3DirectoryReader::open(const char* dirname) {
+bool DirectoryReader::open(const char* dirname) {
     close();
 
     File root = SD.open(dirname);
 
-    if (!root) return;
+    if (!root) return false;
 
     if (!root.isDirectory()) {
         root.close();
-        return;
+        return false;
     }
 
     size_t bufferSize = 0;
@@ -72,13 +72,13 @@ void Mp3DirectoryReader::open(const char* dirname) {
 
     if (length == 0) {
         file.close();
-        return;
+        return true;
     }
 
     root.rewindDirectory();
 
     buffer = new char[bufferSize];
-    sortedMp3s = new char*[length];
+    playlist = new char*[length];
 
     char* buf = buffer;
     uint32_t i = 0;
@@ -89,25 +89,27 @@ void Mp3DirectoryReader::open(const char* dirname) {
 
         strcpy(buf, file.name());
 
-        sortedMp3s[i++] = buf;
+        playlist[i++] = buf;
         buf += (strlen(file.name()) + 1);
     }
 
-    std::sort(sortedMp3s, sortedMp3s + length, compareFilenames);
+    std::sort(playlist, playlist + length, compareFilenames);
 
     file.close();
+
+    return true;
 }
 
 
-void Mp3DirectoryReader::close() {
+void DirectoryReader::close() {
     if (buffer) {
         delete buffer;
         buffer = nullptr;
     }
 
-    if (sortedMp3s) {
-        delete sortedMp3s;
-        sortedMp3s = nullptr;
+    if (playlist) {
+        delete playlist;
+        playlist = nullptr;
     }
 
     length = 0;
