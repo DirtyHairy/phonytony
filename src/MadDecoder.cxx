@@ -6,7 +6,8 @@
 
 MadDecoder::MadDecoder() :
     initialized(false),
-    finished(true)
+    finished(true),
+    leadIn(true)
 {}
 
 MadDecoder::~MadDecoder() {
@@ -20,12 +21,13 @@ bool MadDecoder::open(const char* path) {
 
     if (!file) return false;
 
-    Serial.printf("now playing %s\r\n", path);
+    // Serial.printf("now playing %s\r\n", path);
 
     sampleNo = 0;
     sampleCount = 0;
     ns = 0;
     nsMax = 0;
+    iBufferGuard = 0;
 
     mad_stream_init(&stream);
     mad_frame_init(&frame);
@@ -34,13 +36,15 @@ bool MadDecoder::open(const char* path) {
 
     initialized = true;
     finished = false;
+    leadIn = true;
+    eof = false;
 
     if (!bufferChunk()) {
         close();
         return false;
     }
 
-    #ifdef DEBUG
+    #ifdef DEBUG8
         Serial.printf("decoder initialized for file %s\r\n", path);
     #endif
 
@@ -61,15 +65,14 @@ bool MadDecoder::bufferChunk() {
         target = buffer + unused;
     }
 
-    size_t bytesRead = file.read(target, bytesToRead);
+    size_t bytesRead = eof ? 0 : file.read(target, bytesToRead);
+    eof = eof || bytesRead < bytesToRead;
 
-    if (bytesRead == 0 && bytesToRead > 0) {
-        #ifdef DEBUG
-            Serial.println("failed to buffer chunk --- file probably empty");
-        #endif
-
-        return false;
+    if (eof) {
+        while (bytesRead < bytesToRead && iBufferGuard++ < MAD_BUFFER_GUARD) target[bytesRead++] = 0;
     }
+
+    if (bytesRead == 0) return false;
 
     mad_stream_buffer(&stream, buffer, bytesRead + unused);
 
@@ -83,10 +86,14 @@ bool MadDecoder::bufferChunk() {
 uint32_t MadDecoder::decode(int16_t* buffer, uint32_t count) {
     if (!initialized || finished) return 0;
 
-    uint32_t decodedSamples;
+    uint32_t decodedSamples = 0;
 
-    for (decodedSamples = 0; decodedSamples < count; decodedSamples++) {
+    while (decodedSamples < count) {
         if (!decodeOne(buffer[2*decodedSamples], buffer[2*decodedSamples + 1])) break;
+
+        leadIn = leadIn && buffer[2*decodedSamples] == 0 && buffer[2*decodedSamples + 1] == 0;
+
+        if (!leadIn) decodedSamples++;
     }
 
     if (decodedSamples < count) {
