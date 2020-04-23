@@ -21,9 +21,11 @@
  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+// clang-format off
+
 #include <cstdio>
 
-#include "WString.h"
+#include "Arduino.h"
 #include "stdlib_noniso.h"
 
 /*********************************************/

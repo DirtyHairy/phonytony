@@ -1,18 +1,13 @@
-#include <Arduino.h>
 #include "MadDecoder.hxx"
+
+#include <Arduino.h>
 
 // #define DEBUG
 #define LOG_MAD_ERROR Serial.println(mad_stream_errorstr(&stream));
 
-MadDecoder::MadDecoder() :
-    initialized(false),
-    finished(true),
-    leadIn(true)
-{}
+MadDecoder::MadDecoder() : initialized(false), finished(true), leadIn(true) {}
 
-MadDecoder::~MadDecoder() {
-    close();
-}
+MadDecoder::~MadDecoder() { close(); }
 
 bool MadDecoder::open(const char* path) {
     if (initialized) close();
@@ -44,9 +39,9 @@ bool MadDecoder::open(const char* path) {
         return false;
     }
 
-    #ifdef DEBUG8
-        Serial.printf("decoder initialized for file %s\r\n", path);
-    #endif
+#ifdef DEBUG
+    Serial.printf("decoder initialized for file %s\r\n", path);
+#endif
 
     return true;
 }
@@ -76,9 +71,9 @@ bool MadDecoder::bufferChunk() {
 
     mad_stream_buffer(&stream, buffer, bytesRead + unused);
 
-    #ifdef DEBUG
-        Serial.printf("buffered %i bytes\r\n", bytesRead);
-    #endif
+#ifdef DEBUG
+    Serial.printf("buffered %i bytes\r\n", bytesRead);
+#endif
 
     return true;
 }
@@ -89,9 +84,9 @@ uint32_t MadDecoder::decode(int16_t* buffer, uint32_t count) {
     uint32_t decodedSamples = 0;
 
     while (decodedSamples < count) {
-        if (!decodeOne(buffer[2*decodedSamples], buffer[2*decodedSamples + 1])) break;
+        if (!decodeOne(buffer[2 * decodedSamples], buffer[2 * decodedSamples + 1])) break;
 
-        leadIn = leadIn && buffer[2*decodedSamples] == 0 && buffer[2*decodedSamples + 1] == 0;
+        leadIn = leadIn && buffer[2 * decodedSamples] == 0 && buffer[2 * decodedSamples + 1] == 0;
 
         if (!leadIn) decodedSamples++;
     }
@@ -99,9 +94,9 @@ uint32_t MadDecoder::decode(int16_t* buffer, uint32_t count) {
     if (decodedSamples < count) {
         finished = true;
 
-        #ifdef DEBUG
-            Serial.printf("decoding finished after %i samples\r\n", decodedSamples);
-        #endif
+#ifdef DEBUG
+        Serial.printf("decoding finished after %i samples\r\n", decodedSamples);
+#endif
     }
 
     return decodedSamples;
@@ -116,15 +111,17 @@ bool MadDecoder::decodeOne(int16_t& sampleL, int16_t& sampleR) {
                 if (mad_frame_decode(&frame, &stream) == 0) break;
 
                 if (stream.error == MAD_ERROR_BUFLEN) {
-                    if (bufferChunk()) continue;
-                    else return false;
+                    if (bufferChunk())
+                        continue;
+                    else
+                        return false;
                 }
 
                 if (!MAD_RECOVERABLE(stream.error)) {
-                    #ifdef DEBUG
-                        Serial.print("decoding failed with mad error: ");
-                        LOG_MAD_ERROR;
-                    #endif
+#ifdef DEBUG
+                    Serial.print("decoding failed with mad error: ");
+                    LOG_MAD_ERROR;
+#endif
                     return false;
                 }
             }
@@ -136,9 +133,9 @@ bool MadDecoder::decodeOne(int16_t& sampleL, int16_t& sampleR) {
         switch (mad_synth_frame_onens(&synth, &frame, ns++)) {
             case MAD_FLOW_STOP:
             case MAD_FLOW_BREAK:
-                #ifdef DEBUG
-                    Serial.println("mad_synth_frame_onens failed");
-                #endif
+#ifdef DEBUG
+                Serial.println("mad_synth_frame_onens failed");
+#endif
 
                 return false;
 
@@ -160,9 +157,9 @@ bool MadDecoder::decodeOne(int16_t& sampleL, int16_t& sampleR) {
 
 void MadDecoder::close() {
     if (file) {
-        #ifdef DEBUG
-            Serial.printf("decoder closed after decoding %i bytes\r\n", file.position());
-        #endif
+#ifdef DEBUG
+        Serial.printf("decoder closed after decoding %i bytes\r\n", file.position());
+#endif
 
         file.close();
     }
@@ -176,7 +173,7 @@ void MadDecoder::close() {
     finished = true;
     initialized = false;
 
-    #ifdef DEBUG
-        Serial.println("decoder closed");
-    #endif
+#ifdef DEBUG
+    Serial.println("decoder closed");
+#endif
 }

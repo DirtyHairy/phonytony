@@ -1,6 +1,6 @@
 #include <Arduino.h>
-#include <SPI.h>
 #include <SD.h>
+#include <SPI.h>
 #include <driver/i2s.h>
 #include <freertos/queue.h>
 #include <freertos/task.h>
@@ -8,19 +8,19 @@
 
 #include "DirectoryPlayer.hxx"
 
-#define PIN_POWER       GPIO_NUM_27
-#define PIN_CS_SD       GPIO_NUM_5
-#define PIN_CS_OLED     GPIO_NUM_15
-#define PIN_DC_OLED     GPIO_NUM_21
-#define PIN_RESET       GPIO_NUM_4
-#define PIN_I2S_BCK     GPIO_NUM_26
-#define PIN_I2S_WC      GPIO_NUM_22
-#define PIN_I2S_DATA    GPIO_NUM_25
-#define PIN_RFID_IRQ    GPIO_NUM_33
-#define PIN_CS_RFID     GPIO_NUM_2
+#define PIN_POWER GPIO_NUM_27
+#define PIN_CS_SD GPIO_NUM_5
+#define PIN_CS_OLED GPIO_NUM_15
+#define PIN_DC_OLED GPIO_NUM_21
+#define PIN_RESET GPIO_NUM_4
+#define PIN_I2S_BCK GPIO_NUM_26
+#define PIN_I2S_WC GPIO_NUM_22
+#define PIN_I2S_DATA GPIO_NUM_25
+#define PIN_RFID_IRQ GPIO_NUM_33
+#define PIN_CS_RFID GPIO_NUM_2
 
-#define SPI_FREQ_SD     40000000
-#define SPI_FREQ_OLED   15000000
+#define SPI_FREQ_SD 40000000
+#define SPI_FREQ_OLED 15000000
 
 #define PLAYBACK_CHUNK_SIZE 1024
 #define PLAYBACK_QUEUE_SIZE 8
@@ -38,13 +38,12 @@ bool probeSd() {
     return true;
 }
 
-
 void i2sStreamTask(void* payload) {
     void* buffer = malloc(PLAYBACK_CHUNK_SIZE);
 
     i2s_start(I2S_NUM_0);
 
-    QueueHandle_t *queue = (QueueHandle_t*)payload;
+    QueueHandle_t* queue = (QueueHandle_t*)payload;
     size_t bytes_written;
 
     while (true) {
@@ -73,8 +72,8 @@ void audioTask_() {
     while (true) {
         samplesDecoded = 0;
 
-        while (samplesDecoded < PLAYBACK_CHUNK_SIZE/4) {
-            samplesDecoded += player.decode(buffer, (PLAYBACK_CHUNK_SIZE/4 - samplesDecoded));
+        while (samplesDecoded < PLAYBACK_CHUNK_SIZE / 4) {
+            samplesDecoded += player.decode(buffer, (PLAYBACK_CHUNK_SIZE / 4 - samplesDecoded));
 
             if (player.isFinished()) player.rewind();
         }
@@ -87,12 +86,10 @@ void audioTask_() {
     }
 }
 
-
 void audioTask(void* payload) {
     audioTask_();
     vTaskDelete(NULL);
 }
-
 
 void setup() {
     Serial.begin(115200);
@@ -111,11 +108,7 @@ void setup() {
     };
 
     const i2s_pin_config_t i2s_pins = {
-        .bck_io_num = PIN_I2S_BCK,
-        .ws_io_num = PIN_I2S_WC,
-        .data_out_num = PIN_I2S_DATA,
-        .data_in_num = -1
-    };
+        .bck_io_num = PIN_I2S_BCK, .ws_io_num = PIN_I2S_WC, .data_out_num = PIN_I2S_DATA, .data_in_num = -1};
 
     i2s_driver_install(I2S_NUM_0, &i2s_config, 0, NULL);
     i2s_set_pin(I2S_NUM_0, &i2s_pins);
@@ -130,5 +123,4 @@ void setup() {
     xTaskCreatePinnedToCore(audioTask, "playback", 0xA000, NULL, 10, &audioTaskHandle, 1);
 }
 
-void loop() {
-}
+void loop() {}

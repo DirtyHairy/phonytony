@@ -4,37 +4,34 @@
 #include <stdint.h>
 
 class DirectoryReader {
-    public:
+   public:
+    DirectoryReader();
 
-        DirectoryReader();
+    ~DirectoryReader();
 
-        ~DirectoryReader();
+    bool open(const char* directory);
 
-        bool open(const char* directory);
+    void close();
 
-        void close();
+    const char* getTrack(uint8_t index) { return index < length ? playlist[index] : nullptr; }
 
-        const char* getTrack(uint8_t index) { return index < length ? playlist[index] : nullptr; }
+    uint32_t getLength() const { return length; }
 
-        uint32_t getLength() const { return length; }
+   private:
+    char* buffer;
 
-    private:
+    char** playlist;
 
-        char* buffer;
+    uint32_t length;
 
-        char** playlist;
+   private:
+    DirectoryReader(const DirectoryReader&) = delete;
 
-        uint32_t length;
+    DirectoryReader(DirectoryReader&&) = delete;
 
-    private:
+    DirectoryReader& operator=(const DirectoryReader&) = delete;
 
-        DirectoryReader(const DirectoryReader&) = delete;
-
-        DirectoryReader(DirectoryReader&&) = delete;
-
-        DirectoryReader& operator=(const DirectoryReader&) = delete;
-
-        DirectoryReader& operator=(DirectoryReader&&) = delete;
+    DirectoryReader& operator=(DirectoryReader&&) = delete;
 };
 
-#endif // DIRECTORY_READER_HXX
+#endif  // DIRECTORY_READER_HXX

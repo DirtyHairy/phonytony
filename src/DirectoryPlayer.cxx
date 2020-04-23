@@ -1,8 +1,6 @@
 #include "DirectoryPlayer.hxx"
 
-DirectoryPlayer::DirectoryPlayer() :
-    trackIndex(0)
-{}
+DirectoryPlayer::DirectoryPlayer() : trackIndex(0) {}
 
 bool DirectoryPlayer::open(const char* dirname) {
     if (!directoryReader.open(dirname)) return false;
@@ -24,7 +22,7 @@ uint32_t DirectoryPlayer::decode(int16_t* buffer, uint32_t count) {
         if (!decoder.isFinished()) {
             uint32_t decoded = decoder.decode(buffer, count - decodedSamples);
 
-            buffer += 2*decoded;
+            buffer += 2 * decoded;
             decodedSamples += decoded;
         }
 

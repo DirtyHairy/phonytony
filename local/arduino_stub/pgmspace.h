@@ -1,7 +1,7 @@
-/* 
+/*
   Copyright (c) 2015 Hristo Gochkov. All rights reserved.
   This file is part of the RaspberryPi core for Arduino environment.
- 
+
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
   License as published by the Free Software Foundation; either
@@ -16,6 +16,9 @@
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+
+// clang-format off
+
 #ifndef PGMSPACE_INCLUDE
 #define PGMSPACE_INCLUDE
 

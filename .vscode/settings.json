@@ -3,5 +3,11 @@
         "string": "cpp",
         "*.tcc": "cpp",
         "fstream": "cpp"
+    },
+    "[c]": {
+        "editor.formatOnSave": true
+    },
+    "[cpp]": {
+        "editor.formatOnSave": true
     }
 }

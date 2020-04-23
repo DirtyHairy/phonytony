@@ -22,6 +22,8 @@
 
  */
 
+// clang-format off
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
@@ -48,7 +50,7 @@ char* ltoa(long value, char* result, int base) {
     }
 
     char* out = result;
-    long quotient = abs(value);
+    long quotient = labs(value);
 
     do {
         const long tmp = quotient / base;

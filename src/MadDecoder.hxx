@@ -1,65 +1,60 @@
 #ifndef MAD_DECODER_HXX
 #define MAD_DECODER_HXX
 
-#include <stdint.h>
 #include <SD.h>
 #include <mad.h>
+#include <stdint.h>
 
 class MadDecoder {
-    public:
+   public:
+    static constexpr int CHUNK_SIZE = 0x600;
 
-        static constexpr int CHUNK_SIZE = 0x600;
+   public:
+    MadDecoder();
 
-    public:
+    ~MadDecoder();
 
-        MadDecoder();
+    bool open(const char* file);
 
-        ~MadDecoder();
+    uint32_t decode(int16_t* buffer, uint32_t count);
 
-        bool open(const char* file);
+    bool isFinished() const { return finished; };
 
-        uint32_t decode(int16_t* buffer, uint32_t count);
+    void close();
 
-        bool isFinished() const { return finished; };
+   private:
+    bool bufferChunk();
 
-        void close();
+    bool decodeOne(int16_t& sampleL, int16_t& sampleR);
 
-    private:
+   private:
+    File file;
+    uint8_t buffer[CHUNK_SIZE];
 
-        bool bufferChunk();
+    mad_stream stream;
+    mad_frame frame;
+    mad_synth synth;
 
-        bool decodeOne(int16_t& sampleL, int16_t& sampleR);
+    uint32_t sampleNo;
+    uint32_t sampleCount;
 
-    private:
+    uint32_t ns;
+    uint32_t nsMax;
+    uint32_t iBufferGuard{0};
 
-        File file;
-        uint8_t buffer[CHUNK_SIZE];
+    bool initialized;
+    bool finished;
+    bool leadIn;
+    bool eof{0};
 
-        mad_stream stream;
-        mad_frame frame;
-        mad_synth synth;
+   private:
+    MadDecoder(const MadDecoder&) = delete;
 
-        uint32_t sampleNo;
-        uint32_t sampleCount;
+    MadDecoder(MadDecoder&&) = delete;
 
-        uint32_t ns;
-        uint32_t nsMax;
-        uint32_t iBufferGuard {0};
+    MadDecoder& operator=(const MadDecoder&) = delete;
 
-        bool initialized;
-        bool finished;
-        bool leadIn;
-        bool eof {0};
-
-    private:
-
-        MadDecoder(const MadDecoder&) = delete;
-
-        MadDecoder(MadDecoder&&) = delete;
-
-        MadDecoder& operator=(const MadDecoder&) = delete;
-
-        MadDecoder& operator=(MadDecoder&&) = delete;
+    MadDecoder& operator=(MadDecoder&&) = delete;
 };
 
 #endif

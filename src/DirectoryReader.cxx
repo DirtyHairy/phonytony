@@ -1,7 +1,8 @@
-#include <SD.h>
-#include <algorithm>
-
 #include "DirectoryReader.hxx"
+
+#include <SD.h>
+
+#include <algorithm>
 
 namespace {
     bool isMp3(const char* name) {
@@ -35,17 +36,11 @@ namespace {
         if (i1 == i2) return strcasecmp(l1, l2) < 0;
         return i1 < i2;
     }
-}
+}  // namespace
 
-DirectoryReader::DirectoryReader() :
-    buffer(nullptr),
-    playlist(nullptr),
-    length(0)
-{}
+DirectoryReader::DirectoryReader() : buffer(nullptr), playlist(nullptr), length(0) {}
 
-DirectoryReader::~DirectoryReader() {
-    close();
-}
+DirectoryReader::~DirectoryReader() { close(); }
 
 bool DirectoryReader::open(const char* dirname) {
     close();
@@ -99,7 +94,6 @@ bool DirectoryReader::open(const char* dirname) {
 
     return true;
 }
-
 
 void DirectoryReader::close() {
     if (buffer) {
