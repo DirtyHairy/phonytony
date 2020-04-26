@@ -15,7 +15,7 @@ PosixFS::PosixFS() {}
 
 PosixFS::~PosixFS() {}
 
-FileImplPtr open(const char* path, const char* mode) {
+FileImplPtr PosixFS::open(const char* path, const char* mode) {
     FILE* file = fopen(path, mode);
 
     return file ? std::make_shared<PosixFile>(file, path) : nullptr;

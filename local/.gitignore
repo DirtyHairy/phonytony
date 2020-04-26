@@ -1,2 +1,4 @@
 *.o
 *.a
+*.dSYM
+decode_mp3

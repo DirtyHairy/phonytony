@@ -1,0 +1,40 @@
+AR = ar
+RANLIB = ranlib
+CC = gcc
+CXX = g++
+LD = g++
+CFLAGS = -O0 -g -fsanitize=undefined,address
+CXXFLAGS = $(CFLAGS) -std=c++11 -Wall -Werror
+LDFLAGS = -fsanitize=undefined,address
+
+INCLUDE = -I../lib/libmad -I./arduino_stub -I../src
+LIBS = -L./libmad -L./arduino_stub -larduino_stub -lmad
+
+BINARIES = decode_mp3
+LIBRARIES = arduino_stub/libarduino_stub.a libmad/libmad.a
+SOURCE = MadDecoder.cxx
+OBJECTS = $(SOURCE:.cxx=.o)
+
+all: sub_all
+	$(MAKE) -C. binaries
+
+binaries: $(BINARIES)
+
+$(BINARIES) : % : %.cxx $(OBJECTS)
+	$(CXX) $(INCLUDE) $(CXXFLAGS) $(LDFLAGS) $(LIBS) -o $@ $< $(OBJECTS)
+
+$(SOURCE:.cxx=.o) : %.o : ../src/%.cxx
+	$(CXX) $(CXXFLAGS) $(INCLUDE) -c -o $@ $<
+
+clean: sub_clean
+	rm -f $(OBJECTS) $(LIBRARY)
+
+sub_clean:
+	$(MAKE) -C arduino_stub clean
+	$(MAKE) -C libmad clean
+
+sub_all:
+	$(MAKE) -C arduino_stub all
+	$(MAKE) -C libmad all
+
+.PHONY: all clean sub_clean sub_all

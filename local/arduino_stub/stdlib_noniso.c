@@ -43,6 +43,10 @@ void reverse(char* begin, char* end) {
     }
 }
 
+char* itoa(int value, char* result, int base) {
+    return ltoa(value, result, base);
+}
+
 char* ltoa(long value, char* result, int base) {
     if(base < 2 || base > 16) {
         *result = 0;
@@ -66,6 +70,10 @@ char* ltoa(long value, char* result, int base) {
     reverse(result, out);
     *out = 0;
     return result;
+}
+
+char* utoa(unsigned int value, char* result, int base) {
+    return ultoa(value, result, base);
 }
 
 char* ultoa(unsigned long value, char* result, int base) {
