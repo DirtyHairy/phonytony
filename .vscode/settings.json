@@ -7,7 +7,8 @@
         "functional": "cpp",
         "istream": "cpp",
         "ostream": "cpp",
-        "system_error": "cpp"
+        "system_error": "cpp",
+        "iostream": "cpp"
     },
     "[c]": {
         "editor.formatOnSave": true

@@ -29,13 +29,13 @@ PosixFile::PosixFile(FILE* file, const char* name) : file(file), filename(name) 
 
 PosixFile::~PosixFile() { close(); }
 
-size_t PosixFile::read(uint8_t* buf, size_t size) { return file ? fread((void*)buf, size, 1, file) : 0; }
+size_t PosixFile::read(uint8_t* buf, size_t size) { return file ? fread((void*)buf, 1, size, file) : 0; }
 
 void PosixFile::flush() {
     if (file) fflush(file);
 }
 
-size_t PosixFile::write(const uint8_t* buf, size_t size) { return file ? fwrite((void*)buf, size, 1, file) : 0; }
+size_t PosixFile::write(const uint8_t* buf, size_t size) { return file ? fwrite((void*)buf, 1, size, file) : 0; }
 
 bool PosixFile::seek(uint32_t pos, SeekMode mode) {
     return file ? fseek(file, pos, whenceFromSeekMode(mode)) == 0 : false;

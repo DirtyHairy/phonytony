@@ -1,11 +1,11 @@
-AR = ar
-RANLIB = ranlib
-CC = gcc
-CXX = g++
-LD = g++
-CFLAGS = -O0 -g -fsanitize=undefined,address
-CXXFLAGS = $(CFLAGS) -std=c++11 -Wall -Werror
-LDFLAGS = -fsanitize=undefined,address
+export AR = ar
+export RANLIB = ranlib
+export CC = gcc
+export CXX = g++
+export LD = g++
+export CFLAGS = -O0 -g -fsanitize=address,undefined
+export CXXFLAGS = $(CFLAGS) -std=c++11 -Wall -Werror
+export LDFLAGS = -fsanitize=address,undefined
 
 INCLUDE = -I../lib/libmad -I./arduino_stub -I../src
 LIBS = -L./libmad -L./arduino_stub -larduino_stub -lmad
@@ -20,7 +20,7 @@ all: sub_all
 
 binaries: $(BINARIES)
 
-$(BINARIES) : % : %.cxx $(OBJECTS)
+$(BINARIES) : % : %.cxx $(OBJECTS) $(LIBRARIES)
 	$(CXX) $(INCLUDE) $(CXXFLAGS) $(LDFLAGS) $(LIBS) -o $@ $< $(OBJECTS)
 
 $(SOURCE:.cxx=.o) : %.o : ../src/%.cxx

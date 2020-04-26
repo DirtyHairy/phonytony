@@ -31,7 +31,7 @@ bool MadDecoder::open(const char* path) {
 
     initialized = true;
     finished = false;
-    leadIn = true;
+    leadIn = false;
     eof = false;
 
     if (!bufferChunk()) {
@@ -72,7 +72,7 @@ bool MadDecoder::bufferChunk() {
     mad_stream_buffer(&stream, buffer, bytesRead + unused);
 
 #ifdef DEBUG
-    Serial.printf("buffered %i bytes\r\n", bytesRead);
+    Serial.printf("buffered %lu bytes\r\n", bytesRead);
 #endif
 
     return true;
@@ -158,7 +158,7 @@ bool MadDecoder::decodeOne(int16_t& sampleL, int16_t& sampleR) {
 void MadDecoder::close() {
     if (file) {
 #ifdef DEBUG
-        Serial.printf("decoder closed after decoding %i bytes\r\n", file.position());
+        Serial.printf("decoder closed after decoding %lu bytes\r\n", file.position());
 #endif
 
         file.close();
