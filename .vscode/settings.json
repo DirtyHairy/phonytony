@@ -2,7 +2,12 @@
     "files.associations": {
         "string": "cpp",
         "*.tcc": "cpp",
-        "fstream": "cpp"
+        "fstream": "cpp",
+        "stdexcept": "cpp",
+        "functional": "cpp",
+        "istream": "cpp",
+        "ostream": "cpp",
+        "system_error": "cpp"
     },
     "[c]": {
         "editor.formatOnSave": true

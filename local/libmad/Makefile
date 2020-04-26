@@ -1,7 +1,7 @@
 AR ?= ar
 RANLIB ?= ranlib
 CC ?= gcc
-CFLAGS ?= -O0 -g
+CFLAGS ?= -O0 -g -fsanitize=undefined,address
 
 INCLUDE = -I../../lib/libmad -I../arduino_stub
 

@@ -31,8 +31,8 @@
 #include <string.h>
 #include <inttypes.h>
 
-
 #include "stdlib_noniso.h"
+#include "hal_stub.h"
 
 #define PI 3.1415926535897932384626433832795
 #define HALF_PI 1.5707963267948966192313216916398
@@ -73,38 +73,8 @@
 #define interrupts() sei()
 #define noInterrupts() cli()
 
-#define clockCyclesPerMicrosecond() ( F_CPU / 1000000L )
-#define clockCyclesToMicroseconds(a) ( (a) / clockCyclesPerMicrosecond() )
-#define microsecondsToClockCycles(a) ( (a) * clockCyclesPerMicrosecond() )
-
 #define lowByte(w) ((uint8_t) ((w) & 0xff))
 #define highByte(w) ((uint8_t) ((w) >> 8))
-
-#define bitRead(value, bit) (((value) >> (bit)) & 0x01)
-#define bitSet(value, bit) ((value) |= (1UL << (bit)))
-#define bitClear(value, bit) ((value) &= ~(1UL << (bit)))
-#define bitWrite(value, bit, bitvalue) (bitvalue ? bitSet(value, bit) : bitClear(value, bit))
-
-// avr-libc defines _NOP() since 1.6.2
-#ifndef _NOP
-#define _NOP() do { __asm__ volatile ("nop"); } while (0)
-#endif
-
-#define bit(b) (1UL << (b))
-#define _BV(b) (1UL << (b))
-
-#define digitalPinToPort(pin)       (((pin)>31)?1:0)
-#define digitalPinToBitMask(pin)    (1UL << (((pin)>31)?((pin)-32):(pin)))
-#define digitalPinToTimer(pin)      (0)
-#define analogInPinToBit(P)         (P)
-#define portOutputRegister(port)    ((volatile uint32_t*)((port)?GPIO_OUT1_REG:GPIO_OUT_REG))
-#define portInputRegister(port)     ((volatile uint32_t*)((port)?GPIO_IN1_REG:GPIO_IN_REG))
-#define portModeRegister(port)      ((volatile uint32_t*)((port)?GPIO_ENABLE1_REG:GPIO_ENABLE_REG))
-
-#define NOT_A_PIN -1
-#define NOT_A_PORT -1
-#define NOT_AN_INTERRUPT -1
-#define NOT_ON_TIMER 0
 
 typedef bool boolean;
 typedef uint8_t byte;
@@ -115,11 +85,12 @@ typedef unsigned int word;
 #include <algorithm>
 #include <cmath>
 
-// #include "WCharacter.h"
+#include "WCharacter.h"
 #include "WString.h"
-// #include "Stream.h"
-// #include "Printable.h"
-// #include "Print.h"
+#include "Stream.h"
+#include "Printable.h"
+#include "Print.h"
+#include "Serial.h"
 
 using std::abs;
 using std::isinf;

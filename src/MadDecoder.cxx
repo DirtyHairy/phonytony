@@ -16,7 +16,7 @@ bool MadDecoder::open(const char* path) {
 
     if (!file) return false;
 
-    // Serial.printf("now playing %s\r\n", path);
+    Serial.printf("now playing %s\r\n", path);
 
     sampleNo = 0;
     sampleCount = 0;
