@@ -1,13 +1,16 @@
 #include "PosixFS.h"
 
+#include <dirent.h>
 #include <sys/stat.h>
 
 #include <memory>
 #include <stdexcept>
 
+#include "PosixDirectory.h"
 #include "PosixFile.h"
 
 using namespace fs;
+using std::make_shared;
 
 #define NOT_IMPLEMENTED(s) throw std::runtime_error(s);
 
@@ -16,9 +19,13 @@ PosixFS::PosixFS() {}
 PosixFS::~PosixFS() {}
 
 FileImplPtr PosixFS::open(const char* path, const char* mode) {
-    FILE* file = fopen(path, mode);
+    DIR* dir = opendir(path);
+    if (dir) return make_shared<PosixDirectory>(dir, path);
 
-    return file ? std::make_shared<PosixFile>(file, path) : nullptr;
+    FILE* file = fopen(path, mode);
+    if (file) return make_shared<PosixFile>(file, path);
+
+    return nullptr;
 }
 
 bool PosixFS::exists(const char* path) {

@@ -4,6 +4,7 @@
 
 using namespace fs;
 using std::runtime_error;
+using std::string;
 
 #define NOT_IMPLEMENTED(s) throw runtime_error(s);
 
@@ -25,7 +26,7 @@ namespace {
     }
 }  // namespace
 
-PosixFile::PosixFile(FILE* file, const char* name) : file(file), filename(name) {}
+PosixFile::PosixFile(FILE* file, string name) : file(file), filename(name) {}
 
 PosixFile::~PosixFile() { close(); }
 

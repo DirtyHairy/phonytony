@@ -57,7 +57,7 @@ bool DirectoryReader::open(const char* dirname) {
     size_t bufferSize = 0;
     File file;
 
-    while (file = root.openNextFile()) {
+    while ((file = root.openNextFile())) {
         if (file.isDirectory()) continue;
         if (!isMp3(file.name())) continue;
 
@@ -78,7 +78,7 @@ bool DirectoryReader::open(const char* dirname) {
     char* buf = buffer;
     uint32_t i = 0;
 
-    while (file = root.openNextFile()) {
+    while ((file = root.openNextFile())) {
         if (file.isDirectory()) continue;
         if (!isMp3(file.name())) continue;
 

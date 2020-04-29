@@ -17,6 +17,7 @@ SOURCE_CC = \
 	Print.cxx \
 	FS.cxx \
 	PosixFile.cxx \
+	PosixDirectory.cxx \
 	PosixFS.cxx \
 	Serial.cxx \
 	SD.cxx

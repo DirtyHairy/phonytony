@@ -10,9 +10,9 @@ export LDFLAGS = -fsanitize=address,undefined
 INCLUDE = -I../lib/libmad -I./arduino_stub -I../src
 LIBS = -L./libmad -L./arduino_stub -larduino_stub -lmad
 
-BINARIES = decode_mp3
+BINARIES = decode_mp3 decode_mp3_dir
 LIBRARIES = arduino_stub/libarduino_stub.a libmad/libmad.a
-SOURCE = MadDecoder.cxx
+SOURCE = MadDecoder.cxx DirectoryPlayer.cxx DirectoryReader.cxx
 OBJECTS = $(SOURCE:.cxx=.o)
 
 all: sub_all

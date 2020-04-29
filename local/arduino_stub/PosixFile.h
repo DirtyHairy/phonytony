@@ -8,7 +8,7 @@
 
 class PosixFile : public fs::FileImpl {
    public:
-    PosixFile(FILE* file, const char* name);
+    PosixFile(FILE* file, std::string name);
 
     virtual ~PosixFile() override;
 

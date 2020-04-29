@@ -2,3 +2,5 @@
 *.a
 *.dSYM
 decode_mp3
+decode_mp3_dir
+*.raw
