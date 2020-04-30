@@ -1,6 +1,6 @@
 #include "DirectoryPlayer.hxx"
 
-DirectoryPlayer::DirectoryPlayer() : trackIndex(0) {}
+DirectoryPlayer::DirectoryPlayer() {}
 
 bool DirectoryPlayer::open(const char* dirname) {
     if (!directoryReader.open(dirname)) return false;

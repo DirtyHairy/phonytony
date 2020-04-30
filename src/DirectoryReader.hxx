@@ -18,11 +18,11 @@ class DirectoryReader {
     uint32_t getLength() const { return length; }
 
    private:
-    char* buffer;
+    char* buffer{nullptr};
 
-    char** playlist;
+    char** playlist{nullptr};
 
-    uint32_t length;
+    uint32_t length{0};
 
    private:
     DirectoryReader(const DirectoryReader&) = delete;

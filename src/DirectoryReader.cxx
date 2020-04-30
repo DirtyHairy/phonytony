@@ -38,7 +38,7 @@ namespace {
     }
 }  // namespace
 
-DirectoryReader::DirectoryReader() : buffer(nullptr), playlist(nullptr), length(0) {}
+DirectoryReader::DirectoryReader() {}
 
 DirectoryReader::~DirectoryReader() { close(); }
 

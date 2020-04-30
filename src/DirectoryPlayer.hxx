@@ -25,7 +25,7 @@ class DirectoryPlayer {
 
     DirectoryReader directoryReader;
 
-    uint32_t trackIndex;
+    uint32_t trackIndex{0};
 };
 
 #endif  // DIRECTORY_PLAYER_HXX

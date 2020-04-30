@@ -5,7 +5,7 @@
 // #define DEBUG
 #define LOG_MAD_ERROR Serial.println(mad_stream_errorstr(&stream));
 
-MadDecoder::MadDecoder() : initialized(false), finished(true), leadIn(true) {}
+MadDecoder::MadDecoder() {}
 
 MadDecoder::~MadDecoder() { close(); }
 

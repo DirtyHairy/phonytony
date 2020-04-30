@@ -42,9 +42,9 @@ class MadDecoder {
     uint32_t nsMax;
     uint32_t iBufferGuard{0};
 
-    bool initialized;
-    bool finished;
-    bool leadIn;
+    bool initialized{false};
+    bool finished{true};
+    bool leadIn{true};
     bool eof{0};
 
    private:
