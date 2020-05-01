@@ -8,6 +8,7 @@
 class MadDecoder {
    public:
     static constexpr int CHUNK_SIZE = 0x600;
+    static constexpr int MAX_LEAD_IN_SAMPLES = 3000;
 
    public:
     MadDecoder();
@@ -35,12 +36,13 @@ class MadDecoder {
     mad_frame frame;
     mad_synth synth;
 
-    uint32_t sampleNo;
-    uint32_t sampleCount;
+    uint32_t sampleNo{0};
+    uint32_t sampleCount{0};
 
-    uint32_t ns;
-    uint32_t nsMax;
+    uint32_t ns{0};
+    uint32_t nsMax{0};
     uint32_t iBufferGuard{0};
+    uint32_t leadInSamples{0};
 
     bool initialized{false};
     bool finished{true};

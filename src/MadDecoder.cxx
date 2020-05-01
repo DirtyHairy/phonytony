@@ -18,20 +18,21 @@ bool MadDecoder::open(const char* path) {
 
     Serial.printf("now playing %s\r\n", path);
 
-    sampleNo = 0;
-    sampleCount = 0;
-    ns = 0;
-    nsMax = 0;
-    iBufferGuard = 0;
-
     mad_stream_init(&stream);
     mad_frame_init(&frame);
     mad_synth_init(&synth);
     mad_stream_options(&stream, 0);
 
+    sampleNo = 0;
+    sampleCount = 0;
+    ns = 0;
+    nsMax = 0;
+    iBufferGuard = 0;
+    leadInSamples = 0;
+
     initialized = true;
     finished = false;
-    leadIn = false;
+    leadIn = true;
     eof = false;
 
     if (!bufferChunk()) {
@@ -86,7 +87,8 @@ uint32_t MadDecoder::decode(int16_t* buffer, uint32_t count) {
     while (decodedSamples < count) {
         if (!decodeOne(buffer[2 * decodedSamples], buffer[2 * decodedSamples + 1])) break;
 
-        leadIn = leadIn && buffer[2 * decodedSamples] == 0 && buffer[2 * decodedSamples + 1] == 0;
+        leadIn = leadIn && buffer[2 * decodedSamples] == 0 && buffer[2 * decodedSamples + 1] == 0 &&
+                 leadInSamples++ < MAX_LEAD_IN_SAMPLES;
 
         if (!leadIn) decodedSamples++;
     }
