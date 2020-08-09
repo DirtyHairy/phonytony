@@ -120,7 +120,7 @@ void setup() {
     }
 
     TaskHandle_t audioTaskHandle;
-    xTaskCreatePinnedToCore(audioTask, "playback", 0xA000, NULL, 10, &audioTaskHandle, 1);
+    xTaskCreatePinnedToCore(audioTask, "playback", 0x8000, NULL, 10, &audioTaskHandle, 1);
 }
 
 void loop() {}
