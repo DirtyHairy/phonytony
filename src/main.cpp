@@ -7,6 +7,9 @@
 #include <freertos/task.h>
 #include <mad.h>
 
+#include <iomanip>
+#include <sstream>
+
 #include "DirectoryPlayer.hxx"
 
 #define PIN_SD_CS GPIO_NUM_5
@@ -15,7 +18,7 @@
 #define PIN_I2S_WC GPIO_NUM_22
 #define PIN_I2S_DATA GPIO_NUM_25
 
-#define PIN_RFID_IRQ GPIO_NUM_33
+#define PIN_RFID_IRQ GPIO_NUM_34
 #define PIN_RFID_CS GPIO_NUM_15
 #define PIN_RFID_RESET GPIO_NUM_32
 
@@ -26,6 +29,8 @@
 
 static SPIClass spiVSPI(VSPI);
 static SPIClass spiHSPI(HSPI);
+
+DRAM_ATTR QueueHandle_t rfidInterruptQueue;
 
 bool probeSd() {
     if (!SD.begin(PIN_SD_CS, spiVSPI, SPI_FREQ_SD)) {
@@ -91,37 +96,59 @@ void audioTask(void* payload) {
     vTaskDelete(NULL);
 }
 
-void probeRFID() {
+IRAM_ATTR void rfidIsrHandler() {
+    uint32_t val = 1;
+
+    xQueueSendFromISR(rfidInterruptQueue, &val, NULL);
+}
+
+void _rfidTask() {
     MFRC522 mfrc522(spiHSPI);
 
     mfrc522.PCD_Init(PIN_RFID_CS, PIN_RFID_RESET);
-
     delay(10);
-
-    mfrc522.PCD_DumpVersionToSerial();
 
     if (!mfrc522.PCD_PerformSelfTest()) {
         Serial.println("RC522 self test failed");
         return;
     }
-
     Serial.println("RC522 self test succeeded");
 
     mfrc522.PCD_Init();
 
+    rfidInterruptQueue = xQueueCreate(1, 4);
+    pinMode(PIN_RFID_IRQ, INPUT);
+    attachInterrupt(PIN_RFID_IRQ, rfidIsrHandler, FALLING);
+
+    mfrc522.PCD_WriteRegister(mfrc522.ComIEnReg, 0xa0);
+
     while (true) {
-        delay(1000);
+        mfrc522.PCD_WriteRegister(mfrc522.FIFODataReg, mfrc522.PICC_CMD_REQA);
+        mfrc522.PCD_WriteRegister(mfrc522.CommandReg, mfrc522.PCD_Transceive);
+        mfrc522.PCD_WriteRegister(mfrc522.BitFramingReg, 0x87);
 
-        Serial.println("scanning for new RFIDs");
+        uint32_t value;
+        if (xQueueReceive(rfidInterruptQueue, &value, 100) == pdTRUE) {
+            mfrc522.PCD_WriteRegister(mfrc522.ComIrqReg, 0x7f);
 
-        if (!mfrc522.PICC_IsNewCardPresent()) continue;
+            if (mfrc522.PICC_ReadCardSerial()) {
+                std::stringstream sstream;
 
-        Serial.println("new card detected");
+                for (uint8_t i = 0; i < mfrc522.uid.size; i++) {
+                    sstream << std::setw(2) << std::setfill('0') << std::hex << (int)mfrc522.uid.uidByte[i] << " ";
+                }
 
-        if (!mfrc522.PICC_ReadCardSerial()) continue;
+                Serial.printf("RFID: %s\r\n", sstream.str().c_str());
+            }
 
-        mfrc522.PICC_DumpToSerial(&(mfrc522.uid));
+            mfrc522.PICC_HaltA();
+        }
     }
+}
+
+void rfidTask(void*) {
+    _rfidTask();
+    vTaskDelete(NULL);
 }
 
 void setup() {
@@ -157,7 +184,8 @@ void setup() {
     TaskHandle_t audioTaskHandle;
     xTaskCreatePinnedToCore(audioTask, "playback", 0x8000, NULL, 10, &audioTaskHandle, 1);
 
-    probeRFID();
+    TaskHandle_t rfidTaskHandle;
+    xTaskCreatePinnedToCore(rfidTask, "rfid", 0x0800, NULL, 10, &rfidTaskHandle, 0);
 }
 
-void loop() {}
+void loop() { delay(10000); }

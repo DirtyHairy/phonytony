@@ -8,7 +8,9 @@
         "istream": "cpp",
         "ostream": "cpp",
         "system_error": "cpp",
-        "iostream": "cpp"
+        "iostream": "cpp",
+        "iomanip": "cpp",
+        "iosfwd": "cpp"
     },
     "[c]": {
         "editor.formatOnSave": true
