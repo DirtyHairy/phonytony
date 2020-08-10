@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <MFRC522.h>
 #include <SD.h>
 #include <SPI.h>
 #include <driver/i2s.h>
@@ -8,27 +9,26 @@
 
 #include "DirectoryPlayer.hxx"
 
-#define PIN_POWER GPIO_NUM_27
-#define PIN_CS_SD GPIO_NUM_5
-#define PIN_CS_OLED GPIO_NUM_15
-#define PIN_DC_OLED GPIO_NUM_21
-#define PIN_RESET GPIO_NUM_4
+#define PIN_SD_CS GPIO_NUM_5
+
 #define PIN_I2S_BCK GPIO_NUM_26
 #define PIN_I2S_WC GPIO_NUM_22
 #define PIN_I2S_DATA GPIO_NUM_25
+
 #define PIN_RFID_IRQ GPIO_NUM_33
-#define PIN_CS_RFID GPIO_NUM_2
+#define PIN_RFID_CS GPIO_NUM_15
+#define PIN_RFID_RESET GPIO_NUM_32
 
 #define SPI_FREQ_SD 40000000
-#define SPI_FREQ_OLED 15000000
 
 #define PLAYBACK_CHUNK_SIZE 1024
 #define PLAYBACK_QUEUE_SIZE 8
 
 static SPIClass spiVSPI(VSPI);
+static SPIClass spiHSPI(HSPI);
 
 bool probeSd() {
-    if (!SD.begin(PIN_CS_SD, spiVSPI, SPI_FREQ_SD)) {
+    if (!SD.begin(PIN_SD_CS, spiVSPI, SPI_FREQ_SD)) {
         Serial.println("Failed to initialize SD");
         return false;
     }
@@ -91,8 +91,43 @@ void audioTask(void* payload) {
     vTaskDelete(NULL);
 }
 
+void probeRFID() {
+    MFRC522 mfrc522(spiHSPI);
+
+    mfrc522.PCD_Init(PIN_RFID_CS, PIN_RFID_RESET);
+
+    delay(10);
+
+    mfrc522.PCD_DumpVersionToSerial();
+
+    if (!mfrc522.PCD_PerformSelfTest()) {
+        Serial.println("RC522 self test failed");
+        return;
+    }
+
+    Serial.println("RC522 self test succeeded");
+
+    mfrc522.PCD_Init();
+
+    while (true) {
+        delay(1000);
+
+        Serial.println("scanning for new RFIDs");
+
+        if (!mfrc522.PICC_IsNewCardPresent()) continue;
+
+        Serial.println("new card detected");
+
+        if (!mfrc522.PICC_ReadCardSerial()) continue;
+
+        mfrc522.PICC_DumpToSerial(&(mfrc522.uid));
+    }
+}
+
 void setup() {
     Serial.begin(115200);
+    spiVSPI.begin();
+    spiHSPI.begin();
 
     const i2s_config_t i2s_config = {
         .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX),
@@ -121,6 +156,8 @@ void setup() {
 
     TaskHandle_t audioTaskHandle;
     xTaskCreatePinnedToCore(audioTask, "playback", 0x8000, NULL, 10, &audioTaskHandle, 1);
+
+    probeRFID();
 }
 
 void loop() {}

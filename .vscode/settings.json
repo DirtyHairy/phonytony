@@ -15,5 +15,6 @@
     },
     "[cpp]": {
         "editor.formatOnSave": true
-    }
+    },
+    "restructuredtext.confPath": ""
 }
