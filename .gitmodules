@@ -1,3 +1,6 @@
 [submodule "lib/MFRC522"]
 	path = lib/MFRC522
 	url = git@github.com:DirtyHairy/rfid.git
+[submodule "lib/MCP23S17"]
+	path = lib/MCP23S17
+	url = git@github.com:MajenkoLibraries/MCP23S17.git

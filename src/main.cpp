@@ -1,12 +1,16 @@
 #include <Arduino.h>
+#include <MCP23S17.h>
 #include <MFRC522.h>
 #include <SD.h>
 #include <SPI.h>
 #include <driver/i2s.h>
+#include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
+#include <freertos/semphr.h>
 #include <freertos/task.h>
 #include <mad.h>
 
+#include <Lock.hxx>
 #include <iomanip>
 #include <sstream>
 
@@ -20,17 +24,22 @@
 
 #define PIN_RFID_IRQ GPIO_NUM_34
 #define PIN_RFID_CS GPIO_NUM_15
-#define PIN_RFID_RESET GPIO_NUM_32
+
+#define MCP23S17_CS GPIO_NUM_27
+#define MCP23S17_IRQ GPIO_NUM_32
 
 #define SPI_FREQ_SD 40000000
+#define HSPI_FREQ 20000000
 
 #define PLAYBACK_CHUNK_SIZE 1024
 #define PLAYBACK_QUEUE_SIZE 8
 
 static SPIClass spiVSPI(VSPI);
 static SPIClass spiHSPI(HSPI);
+static SemaphoreHandle_t hspiMutex;
 
-DRAM_ATTR QueueHandle_t rfidInterruptQueue;
+DRAM_ATTR static QueueHandle_t rfidInterruptQueue;
+DRAM_ATTR static QueueHandle_t gpioInterruptQueue;
 
 bool probeSd() {
     if (!SD.begin(PIN_SD_CS, spiVSPI, SPI_FREQ_SD)) {
@@ -105,43 +114,69 @@ IRAM_ATTR void rfidIsrHandler() {
 void _rfidTask() {
     MFRC522 mfrc522(spiHSPI);
 
-    mfrc522.PCD_Init(PIN_RFID_CS, PIN_RFID_RESET);
+    {
+        Lock lock(hspiMutex);
+
+        mfrc522.PCD_Init(PIN_RFID_CS, MFRC522::UNUSED_PIN);
+    }
+
     delay(10);
 
-    if (!mfrc522.PCD_PerformSelfTest()) {
+    bool selfTestSucceeded;
+    {
+        Lock lock(hspiMutex);
+
+        selfTestSucceeded = mfrc522.PCD_PerformSelfTest();
+    }
+
+    if (!selfTestSucceeded) {
         Serial.println("RC522 self test failed");
         return;
     }
-    Serial.println("RC522 self test succeeded");
 
-    mfrc522.PCD_Init();
+    Serial.println("RC522 self test succeeded");
 
     rfidInterruptQueue = xQueueCreate(1, 4);
     pinMode(PIN_RFID_IRQ, INPUT);
     attachInterrupt(PIN_RFID_IRQ, rfidIsrHandler, FALLING);
 
-    mfrc522.PCD_WriteRegister(mfrc522.ComIEnReg, 0xa0);
+    {
+        Lock lock(hspiMutex);
+
+        mfrc522.PCD_Init();
+        mfrc522.PCD_WriteRegister(mfrc522.ComIEnReg, 0xa0);
+    }
 
     while (true) {
-        mfrc522.PCD_WriteRegister(mfrc522.FIFODataReg, mfrc522.PICC_CMD_REQA);
-        mfrc522.PCD_WriteRegister(mfrc522.CommandReg, mfrc522.PCD_Transceive);
-        mfrc522.PCD_WriteRegister(mfrc522.BitFramingReg, 0x87);
+        {
+            Lock lock(hspiMutex);
+
+            mfrc522.PCD_WriteRegister(mfrc522.FIFODataReg, mfrc522.PICC_CMD_REQA);
+            mfrc522.PCD_WriteRegister(mfrc522.CommandReg, mfrc522.PCD_Transceive);
+            mfrc522.PCD_WriteRegister(mfrc522.BitFramingReg, 0x87);
+        }
 
         uint32_t value;
-        if (xQueueReceive(rfidInterruptQueue, &value, 100) == pdTRUE) {
+        if (xQueueReceive(rfidInterruptQueue, &value, 100) != pdTRUE) continue;
+
+        bool readSerialSucceeded;
+
+        {
+            Lock lock(hspiMutex);
+
             mfrc522.PCD_WriteRegister(mfrc522.ComIrqReg, 0x7f);
+            readSerialSucceeded = mfrc522.PICC_ReadCardSerial();
+            mfrc522.PICC_HaltA();
+        }
 
-            if (mfrc522.PICC_ReadCardSerial()) {
-                std::stringstream sstream;
+        if (readSerialSucceeded) {
+            std::stringstream sstream;
 
-                for (uint8_t i = 0; i < mfrc522.uid.size; i++) {
-                    sstream << std::setw(2) << std::setfill('0') << std::hex << (int)mfrc522.uid.uidByte[i] << " ";
-                }
-
-                Serial.printf("RFID: %s\r\n", sstream.str().c_str());
+            for (uint8_t i = 0; i < mfrc522.uid.size; i++) {
+                sstream << std::setw(2) << std::setfill('0') << std::hex << (int)mfrc522.uid.uidByte[i] << " ";
             }
 
-            mfrc522.PICC_HaltA();
+            Serial.printf("RFID: %s\r\n", sstream.str().c_str());
         }
     }
 }
@@ -151,10 +186,65 @@ void rfidTask(void*) {
     vTaskDelete(NULL);
 }
 
+IRAM_ATTR void gpioIsr() {
+    uint32_t val = 1;
+
+    xQueueSendFromISR(gpioInterruptQueue, &val, NULL);
+}
+
+void _gpioTask() {
+    MCP23S17 mcp23s17(spiHSPI, MCP23S17_CS, 0);
+
+    gpioInterruptQueue = xQueueCreate(1, 4);
+    pinMode(MCP23S17_IRQ, INPUT_PULLUP);
+    attachInterrupt(MCP23S17_IRQ, gpioIsr, FALLING);
+
+    {
+        Lock lock(hspiMutex);
+
+        mcp23s17.begin();
+        mcp23s17.setMirror(false);
+        mcp23s17.setInterruptOD(false);
+        mcp23s17.setInterruptLevel(LOW);
+
+        for (uint8_t i = 8; i < 16; i++) {
+            mcp23s17.pinMode(i, INPUT_PULLUP);
+            mcp23s17.enableInterrupt(i, CHANGE);
+        }
+    }
+
+    while (true) {
+        uint32_t value;
+        if (xQueueReceive(gpioInterruptQueue, &value, 100) != pdTRUE) continue;
+
+        uint16_t signalingPins, pins;
+
+        {
+            Lock lock(hspiMutex);
+
+            signalingPins = mcp23s17.getInterruptPins();
+            pins = mcp23s17.getInterruptValue();
+        }
+
+        uint8_t pushedButtons = (signalingPins >> 8) & (~pins >> 8);
+
+        if (pushedButtons) Serial.printf("GPIO interrupt: 0x%02x\r\n", pushedButtons);
+    }
+}
+
+void gpioTask(void*) {
+    _gpioTask();
+    vTaskDelete(NULL);
+}
+
 void setup() {
+    hspiMutex = xSemaphoreCreateMutex();
+
     Serial.begin(115200);
+
     spiVSPI.begin();
     spiHSPI.begin();
+    spiHSPI.setFrequency(HSPI_FREQ);
 
     const i2s_config_t i2s_config = {
         .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX),
@@ -186,6 +276,9 @@ void setup() {
 
     TaskHandle_t rfidTaskHandle;
     xTaskCreatePinnedToCore(rfidTask, "rfid", 0x0800, NULL, 10, &rfidTaskHandle, 0);
+
+    TaskHandle_t gpioTaskHandle;
+    xTaskCreatePinnedToCore(gpioTask, "gpio", 0x0800, NULL, 10, &gpioTaskHandle, 0);
 }
 
 void loop() { delay(10000); }
