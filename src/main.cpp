@@ -105,7 +105,7 @@ void audioTask(void* payload) {
     vTaskDelete(NULL);
 }
 
-IRAM_ATTR void rfidIsrHandler() {
+IRAM_ATTR void rfidIsr() {
     uint32_t val = 1;
 
     xQueueSendFromISR(rfidInterruptQueue, &val, NULL);
@@ -138,7 +138,7 @@ void _rfidTask() {
 
     rfidInterruptQueue = xQueueCreate(1, 4);
     pinMode(PIN_RFID_IRQ, INPUT);
-    attachInterrupt(PIN_RFID_IRQ, rfidIsrHandler, FALLING);
+    attachInterrupt(PIN_RFID_IRQ, rfidIsr, FALLING);
 
     {
         Lock lock(hspiMutex);
