@@ -226,7 +226,7 @@ void _gpioTask() {
             pins = mcp23s17.getInterruptValue();
         }
 
-        uint8_t pushedButtons = (signalingPins >> 8) & (~pins >> 8);
+        uint8_t pushedButtons = (signalingPins >> 8) & (pins >> 8);
 
         if (pushedButtons) Serial.printf("GPIO interrupt: 0x%02x\r\n", pushedButtons);
     }
