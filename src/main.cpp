@@ -28,11 +28,17 @@
 #define MCP23S17_CS GPIO_NUM_27
 #define MCP23S17_IRQ GPIO_NUM_32
 
+#define POWER_PIN GPIO_NUM_21
+
 #define SPI_FREQ_SD 40000000
 #define HSPI_FREQ 20000000
 
 #define PLAYBACK_CHUNK_SIZE 1024
 #define PLAYBACK_QUEUE_SIZE 8
+
+#define AUDIO_CORE 1
+#define SERVICE_CORE 0
+#define CPU_FREQUENCY 160
 
 static SPIClass spiVSPI(VSPI);
 static SPIClass spiHSPI(HSPI);
@@ -238,9 +244,17 @@ void gpioTask(void*) {
 }
 
 void setup() {
+    setCpuFrequencyMhz(CPU_FREQUENCY);
     hspiMutex = xSemaphoreCreateMutex();
 
     Serial.begin(115200);
+
+    pinMode(POWER_PIN, OUTPUT);
+    digitalWrite(POWER_PIN, 0);
+
+    delay(100);
+
+    Serial.println("power enabled");
 
     spiVSPI.begin();
     spiHSPI.begin();
@@ -272,13 +286,13 @@ void setup() {
     }
 
     TaskHandle_t audioTaskHandle;
-    xTaskCreatePinnedToCore(audioTask, "playback", 0x8000, NULL, 10, &audioTaskHandle, 1);
+    xTaskCreatePinnedToCore(audioTask, "playback", 0x8000, NULL, 10, &audioTaskHandle, AUDIO_CORE);
 
     TaskHandle_t rfidTaskHandle;
-    xTaskCreatePinnedToCore(rfidTask, "rfid", 0x0800, NULL, 10, &rfidTaskHandle, 0);
+    xTaskCreatePinnedToCore(rfidTask, "rfid", 0x0800, NULL, 10, &rfidTaskHandle, SERVICE_CORE);
 
     TaskHandle_t gpioTaskHandle;
-    xTaskCreatePinnedToCore(gpioTask, "gpio", 0x0800, NULL, 10, &gpioTaskHandle, 0);
+    xTaskCreatePinnedToCore(gpioTask, "gpio", 0x0800, NULL, 10, &gpioTaskHandle, SERVICE_CORE);
 }
 
-void loop() { delay(10000); }
+void loop() { vTaskDelete(NULL); }
