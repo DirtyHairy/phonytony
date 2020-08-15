@@ -213,7 +213,7 @@ void _gpioTask() {
         mcp23s17.setInterruptOD(false);
         mcp23s17.setInterruptLevel(LOW);
 
-        for (uint8_t i = 8; i < 16; i++) {
+        for (uint8_t i = 8; i < 13; i++) {
             mcp23s17.pinMode(i, INPUT_PULLUP);
             mcp23s17.enableInterrupt(i, CHANGE);
         }
