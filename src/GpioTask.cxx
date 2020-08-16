@@ -12,6 +12,7 @@
 #include "Lock.hxx"
 #include "config.h"
 #include "Button.hxx"
+#include "AudioTask.hxx"
 
 namespace {
 
@@ -21,7 +22,12 @@ SemaphoreHandle_t spiMutex;
 
 Button buttons[] = {
     Button(
-        0x01, []() { Serial.println("play / pause"); }, 3000, []() { Serial.println("power off"); }),
+        0x01,
+        []() {
+            Serial.println("toggle pause");
+            AudioTask::togglePause();
+        },
+        3000, []() { Serial.println("power off"); }),
     Button(0x02, []() { Serial.println("volume down"); }),
     Button(0x04, []() { Serial.println("volume up"); }),
     Button(0x08, []() { Serial.println("previous"); }),

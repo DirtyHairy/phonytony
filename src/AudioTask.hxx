@@ -9,6 +9,8 @@ void initialize();
 
 void start();
 
+void togglePause();
+
 }  // namespace AudioTask
 
 #endif  // AUDIO_TASK_HXX

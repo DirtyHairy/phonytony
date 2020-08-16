@@ -10,12 +10,18 @@
 
 #include "DirectoryPlayer.hxx"
 
+#define COMMAND_QUEUE_SIZE 3
+
 namespace {
+
+enum class Command : uint8_t { togglePause, volumeDown, volumeUp, previous, next };
+
+QueueHandle_t commandQueue;
+
+bool paused = false;
 
 void i2sStreamTask(void* payload) {
     void* buffer = malloc(PLAYBACK_CHUNK_SIZE);
-
-    i2s_start(I2S_NUM_0);
 
     QueueHandle_t* queue = (QueueHandle_t*)payload;
     size_t bytes_written;
@@ -24,6 +30,31 @@ void i2sStreamTask(void* payload) {
         xQueueReceive(*queue, buffer, portMAX_DELAY);
 
         i2s_write(I2S_NUM_0, buffer, PLAYBACK_CHUNK_SIZE, &bytes_written, portMAX_DELAY);
+    }
+}
+
+void executeCommandPause() {
+    paused = !paused;
+
+    if (paused) {
+        i2s_stop(I2S_NUM_0);
+    } else {
+        i2s_start(I2S_NUM_0);
+    }
+}
+
+void receiveAndHandleCommand() {
+    Command command;
+
+    if (xQueueReceive(commandQueue, (void*)&command, 0) == pdTRUE) {
+        switch (command) {
+            case Command::togglePause:
+                executeCommandPause();
+                break;
+
+            default:
+                Serial.printf("unhandled audio command: %i\r\n", (int)command);
+        }
     }
 }
 
@@ -42,22 +73,31 @@ void audioTask_() {
     xTaskCreatePinnedToCore(i2sStreamTask, "i2s", STACK_SIZE_I2S, (void*)&audioQueue, TASK_PRIORITY_I2S, &task,
                             AUDIO_CORE);
 
+    paused = false;
+    i2s_start(I2S_NUM_0);
+
     size_t samplesDecoded = 0;
 
     while (true) {
-        samplesDecoded = 0;
+        receiveAndHandleCommand();
 
-        while (samplesDecoded < PLAYBACK_CHUNK_SIZE / 4) {
-            samplesDecoded += player.decode(buffer, (PLAYBACK_CHUNK_SIZE / 4 - samplesDecoded));
+        if (paused) {
+            delay(100);
+        } else {
+            samplesDecoded = 0;
 
-            if (player.isFinished()) player.rewind();
+            while (samplesDecoded < PLAYBACK_CHUNK_SIZE / 4) {
+                samplesDecoded += player.decode(buffer, (PLAYBACK_CHUNK_SIZE / 4 - samplesDecoded));
+
+                if (player.isFinished()) player.rewind();
+            }
+
+            for (int i = 0; i < PLAYBACK_CHUNK_SIZE / 2; i++) {
+                buffer[i] /= 5;
+            }
+
+            xQueueSend(audioQueue, (void*)buffer, portMAX_DELAY);
         }
-
-        for (int i = 0; i < PLAYBACK_CHUNK_SIZE / 2; i++) {
-            buffer[i] /= 5;
-        }
-
-        xQueueSend(audioQueue, (void*)buffer, portMAX_DELAY);
     }
 }
 
@@ -91,7 +131,7 @@ void setupI2s() {
 
 }  // namespace
 
-void AudioTask::initialize() {}
+void AudioTask::initialize() { commandQueue = xQueueCreate(COMMAND_QUEUE_SIZE, sizeof(Command)); }
 
 void AudioTask::start() {
     setupI2s();
@@ -99,4 +139,10 @@ void AudioTask::start() {
     TaskHandle_t audioTaskHandle;
     xTaskCreatePinnedToCore(audioTask, "audio", STACK_SIZE_AUDIO, NULL, TASK_PRIORITY_AUDIO, &audioTaskHandle,
                             AUDIO_CORE);
+}
+
+void AudioTask::togglePause() {
+    const Command command = Command::togglePause;
+
+    xQueueSend(commandQueue, (void*)&command, portMAX_DELAY);
 }
