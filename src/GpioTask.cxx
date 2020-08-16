@@ -38,8 +38,22 @@ Button buttons[] = {
                Serial.println("volume up");
                AudioTask::volumeUp();
            }),
-    Button(BTN_PREVIOUS_MASK, []() { Serial.println("previous"); }),
-    Button(BTN_NEXT_MASK, []() { Serial.println("next"); }),
+    Button(
+        BTN_PREVIOUS_MASK,
+        []() {
+            Serial.println("previous");
+            AudioTask::previous();
+        },
+        BTN_REWIND_DELAY,
+        []() {
+            AudioTask::rewind();
+            Serial.println("rewind");
+        }),
+    Button(BTN_NEXT_MASK, BTN_NEXT_REPEAT,
+           []() {
+               Serial.println("next");
+               AudioTask::next();
+           }),
 };
 
 extern "C" IRAM_ATTR void gpioIsr() {
@@ -86,8 +100,8 @@ void _gpioTask() {
             {
                 Lock lock(spiMutex);
 
-                pins = mcp23s17.readPort(1);
                 mcp23s17.getInterruptValue();
+                pins = mcp23s17.readPort(1);
             }
 
             for (Button& button : buttons) button.updateState(pins, timestamp);

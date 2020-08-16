@@ -18,6 +18,14 @@ class DirectoryPlayer {
 
     void rewind();
 
+    void rewindTrack();
+
+    void previousTrack();
+
+    void nextTrack();
+
+    uint32_t trackPosition() const;
+
     void close();
 
    private:

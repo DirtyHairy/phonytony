@@ -11,19 +11,30 @@
 #include "DirectoryPlayer.hxx"
 
 #define COMMAND_QUEUE_SIZE 3
-#define VOLUME_STEP 10
-#define VOLUME_LIMIT 100
-#define VOLUME_FULL 100
-#define VOLLUME_DEFAULT 20
 
 namespace {
 
-enum class Command : uint8_t { togglePause, volumeDown, volumeUp, previous, next };
+enum class Command : uint8_t { togglePause, volumeDown, volumeUp, previous, next, rewind };
 
 QueueHandle_t commandQueue;
+QueueHandle_t audioQueue;
 
 bool paused = false;
 int32_t volume = VOLLUME_DEFAULT;
+
+DirectoryPlayer player;
+
+class ResetAudio {
+   public:
+    ResetAudio() {
+        if (paused) {
+            xQueueReset(audioQueue);
+            i2s_zero_dma_buffer(I2S_NUM_0);
+        }
+    }
+
+    ~ResetAudio() {}
+};
 
 void i2sStreamTask(void* payload) {
     void* buffer = malloc(PLAYBACK_CHUNK_SIZE);
@@ -38,36 +49,56 @@ void i2sStreamTask(void* payload) {
     }
 }
 
-void executeCommandPause() {
-    paused = !paused;
-
-    if (paused) {
-        i2s_stop(I2S_NUM_0);
-    } else {
-        i2s_start(I2S_NUM_0);
-    }
-}
-
-void executeCommandVolumeUp() { volume = std::min((int32_t)VOLUME_LIMIT, volume + VOLUME_STEP); }
-
-void executeCommandVolumeDown() { volume = std::max((int32_t)VOLUME_STEP, volume - VOLUME_STEP); }
-
 void receiveAndHandleCommand() {
     Command command;
 
     if (xQueueReceive(commandQueue, (void*)&command, 0) == pdTRUE) {
         switch (command) {
             case Command::togglePause:
-                executeCommandPause();
+                paused = !paused;
+
+                if (paused) {
+                    i2s_stop(I2S_NUM_0);
+                } else {
+                    i2s_start(I2S_NUM_0);
+                }
+
                 break;
 
             case Command::volumeUp:
-                executeCommandVolumeUp();
+                volume = std::min((int32_t)VOLUME_LIMIT, volume + VOLUME_STEP);
                 break;
 
             case Command::volumeDown:
-                executeCommandVolumeDown();
+                volume = std::max((int32_t)VOLUME_STEP, volume - VOLUME_STEP);
                 break;
+
+            case Command::previous: {
+                ResetAudio resetAudio;
+
+                if (player.trackPosition() / (SAMPLE_RATE / 1000) < REWIND_TIMEOUT)
+                    player.previousTrack();
+                else
+                    player.rewindTrack();
+            }
+
+            break;
+
+            case Command::next: {
+                ResetAudio resetAudio;
+
+                player.nextTrack();
+            }
+
+            break;
+
+            case Command::rewind: {
+                ResetAudio resetAudio;
+
+                player.rewind();
+            }
+
+            break;
 
             default:
                 Serial.printf("unhandled audio command: %i\r\n", (int)command);
@@ -76,15 +107,12 @@ void receiveAndHandleCommand() {
 }
 
 void audioTask_() {
-    DirectoryPlayer player;
-
     if (!player.open("/album")) {
         Serial.println("unable to open /album");
         return;
     }
 
     int16_t* buffer = (int16_t*)malloc(PLAYBACK_CHUNK_SIZE);
-    QueueHandle_t audioQueue = xQueueCreate(PLAYBACK_QUEUE_SIZE, PLAYBACK_CHUNK_SIZE);
 
     TaskHandle_t task;
     xTaskCreatePinnedToCore(i2sStreamTask, "i2s", STACK_SIZE_I2S, (void*)&audioQueue, TASK_PRIORITY_I2S, &task,
@@ -150,7 +178,10 @@ void dispatchCommand(Command command) { xQueueSend(commandQueue, (void*)&command
 
 }  // namespace
 
-void AudioTask::initialize() { commandQueue = xQueueCreate(COMMAND_QUEUE_SIZE, sizeof(Command)); }
+void AudioTask::initialize() {
+    commandQueue = xQueueCreate(COMMAND_QUEUE_SIZE, sizeof(Command));
+    audioQueue = xQueueCreate(PLAYBACK_QUEUE_SIZE, PLAYBACK_CHUNK_SIZE);
+}
 
 void AudioTask::start() {
     setupI2s();
@@ -165,3 +196,9 @@ void AudioTask::togglePause() { dispatchCommand(Command::togglePause); }
 void AudioTask::volumeUp() { dispatchCommand(Command::volumeUp); }
 
 void AudioTask::volumeDown() { dispatchCommand(Command::volumeDown); }
+
+void AudioTask::previous() { dispatchCommand(Command::previous); }
+
+void AudioTask::next() { dispatchCommand(Command::next); }
+
+void AudioTask::rewind() { dispatchCommand(Command::rewind); }

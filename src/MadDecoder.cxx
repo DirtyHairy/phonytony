@@ -16,6 +16,8 @@ bool MadDecoder::open(const char* path) {
 
     if (!file) return false;
 
+    this->path = path;
+
     Serial.printf("now playing %s\r\n", path);
 
     mad_stream_init(&stream);
@@ -29,6 +31,7 @@ bool MadDecoder::open(const char* path) {
     nsMax = 0;
     iBufferGuard = 0;
     leadInSamples = 0;
+    totalSamples = 0;
 
     initialized = true;
     finished = false;
@@ -101,6 +104,8 @@ uint32_t MadDecoder::decode(int16_t* buffer, uint32_t count) {
 #endif
     }
 
+    totalSamples += decodedSamples;
+
     return decodedSamples;
 }
 
@@ -169,7 +174,7 @@ void MadDecoder::close() {
     if (initialized) {
         mad_stream_finish(&stream);
         mad_frame_finish(&frame);
-        mad_synth_init(&synth);
+        mad_synth_finish(&synth);
     }
 
     finished = true;
@@ -179,3 +184,10 @@ void MadDecoder::close() {
     Serial.println("decoder closed");
 #endif
 }
+
+void MadDecoder::rewind() {
+    close();
+    open(path.c_str());
+}
+
+uint32_t MadDecoder::position() const { return totalSamples; }

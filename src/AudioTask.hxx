@@ -10,10 +10,11 @@ void initialize();
 void start();
 
 void togglePause();
-
 void volumeUp();
-
 void volumeDown();
+void previous();
+void next();
+void rewind();
 
 }  // namespace AudioTask
 

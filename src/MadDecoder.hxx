@@ -3,7 +3,9 @@
 
 #include <SD.h>
 #include <mad.h>
-#include <stdint.h>
+
+#include <cstdint>
+#include <string>
 
 class MadDecoder {
    public:
@@ -23,6 +25,10 @@ class MadDecoder {
 
     void close();
 
+    uint32_t position() const;
+
+    void rewind();
+
    private:
     bool bufferChunk();
 
@@ -30,6 +36,7 @@ class MadDecoder {
 
    private:
     File file;
+    std::string path;
     uint8_t buffer[CHUNK_SIZE];
 
     mad_stream stream;
@@ -38,6 +45,7 @@ class MadDecoder {
 
     uint32_t sampleNo{0};
     uint32_t sampleCount{0};
+    uint32_t totalSamples{0};
 
     uint32_t ns{0};
     uint32_t nsMax{0};
