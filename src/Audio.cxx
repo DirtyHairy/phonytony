@@ -38,7 +38,7 @@ void i2sStreamTask(void* payload) {
 
     QueueHandle_t* queue = (QueueHandle_t*)payload;
     size_t bytes_written;
-    bool wasPaused = false;
+    bool wasPaused = true;
 
     while (true) {
         xQueueReceive(*queue, chunk, portMAX_DELAY);
@@ -121,9 +121,7 @@ void audioTask_() {
                             AUDIO_CORE);
 
     paused = false;
-    i2s_start(I2S_NUM);
-
-    size_t samplesDecoded = 0;
+    clearDmaBufferOnResume = false;
 
     while (true) {
         receiveAndHandleCommand(paused);
@@ -133,7 +131,7 @@ void audioTask_() {
 
         if (!paused) {
             clearDmaBufferOnResume = false;
-            samplesDecoded = 0;
+            size_t samplesDecoded = 0;
 
             while (samplesDecoded < PLAYBACK_CHUNK_SIZE / 4) {
                 samplesDecoded += player.decode(chunk->samples, (PLAYBACK_CHUNK_SIZE / 4 - samplesDecoded));
