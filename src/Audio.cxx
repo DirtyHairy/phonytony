@@ -1,4 +1,4 @@
-#include "AudioTask.hxx"
+#include "Audio.hxx"
 
 // clang-format off
 #include <freertos/FreeRTOS.h>
@@ -178,12 +178,12 @@ void dispatchCommand(Command command) { xQueueSend(commandQueue, (void*)&command
 
 }  // namespace
 
-void AudioTask::initialize() {
+void Audio::initialize() {
     commandQueue = xQueueCreate(COMMAND_QUEUE_SIZE, sizeof(Command));
     audioQueue = xQueueCreate(PLAYBACK_QUEUE_SIZE, PLAYBACK_CHUNK_SIZE);
 }
 
-void AudioTask::start() {
+void Audio::start() {
     setupI2s();
 
     TaskHandle_t audioTaskHandle;
@@ -191,14 +191,14 @@ void AudioTask::start() {
                             AUDIO_CORE);
 }
 
-void AudioTask::togglePause() { dispatchCommand(Command::togglePause); }
+void Audio::togglePause() { dispatchCommand(Command::togglePause); }
 
-void AudioTask::volumeUp() { dispatchCommand(Command::volumeUp); }
+void Audio::volumeUp() { dispatchCommand(Command::volumeUp); }
 
-void AudioTask::volumeDown() { dispatchCommand(Command::volumeDown); }
+void Audio::volumeDown() { dispatchCommand(Command::volumeDown); }
 
-void AudioTask::previous() { dispatchCommand(Command::previous); }
+void Audio::previous() { dispatchCommand(Command::previous); }
 
-void AudioTask::next() { dispatchCommand(Command::next); }
+void Audio::next() { dispatchCommand(Command::next); }
 
-void AudioTask::rewind() { dispatchCommand(Command::rewind); }
+void Audio::rewind() { dispatchCommand(Command::rewind); }

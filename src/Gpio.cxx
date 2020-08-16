@@ -1,4 +1,4 @@
-#include "GpioTask.hxx"
+#include "Gpio.hxx"
 
 // clang-format off
 #include <freertos/FreeRTOS.h>
@@ -12,7 +12,7 @@
 #include "Lock.hxx"
 #include "config.h"
 #include "Button.hxx"
-#include "AudioTask.hxx"
+#include "Audio.hxx"
 
 namespace {
 
@@ -25,34 +25,34 @@ Button buttons[] = {
         BTN_PAUSE_MASK,
         []() {
             Serial.println("toggle pause");
-            AudioTask::togglePause();
+            Audio::togglePause();
         },
         BTN_POWEROFF_DELAY, []() { Serial.println("power off"); }),
     Button(BTN_VOLUME_DOWN_MASK, BTN_VOLUME_REPEAT,
            []() {
                Serial.println("volume down");
-               AudioTask::volumeDown();
+               Audio::volumeDown();
            }),
     Button(BTN_VOLUME_UP_MASK, BTN_VOLUME_REPEAT,
            []() {
                Serial.println("volume up");
-               AudioTask::volumeUp();
+               Audio::volumeUp();
            }),
     Button(
         BTN_PREVIOUS_MASK,
         []() {
             Serial.println("previous");
-            AudioTask::previous();
+            Audio::previous();
         },
         BTN_REWIND_DELAY,
         []() {
-            AudioTask::rewind();
+            Audio::rewind();
             Serial.println("rewind");
         }),
     Button(BTN_NEXT_MASK, BTN_NEXT_REPEAT,
            []() {
                Serial.println("next");
-               AudioTask::next();
+               Audio::next();
            }),
 };
 
@@ -118,12 +118,12 @@ void gpioTask(void*) {
 
 }  // namespace
 
-void GpioTask::initialize(SPIClass& _spi, void* _spiMutex) {
+void Gpio::initialize(SPIClass& _spi, void* _spiMutex) {
     spi = &_spi;
     spiMutex = _spiMutex;
 }
 
-void GpioTask::start() {
+void Gpio::start() {
     TaskHandle_t gpioTaskHandle;
     xTaskCreatePinnedToCore(gpioTask, "gpio", STACK_SIZE_GPIO, NULL, TASK_PRIORITY_GPIO, &gpioTaskHandle, SERVICE_CORE);
 }

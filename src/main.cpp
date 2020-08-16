@@ -12,9 +12,9 @@
 #include <SPI.h>
 #include <freertos/semphr.h>
 
-#include "AudioTask.hxx"
-#include "RfidTask.hxx"
-#include "GpioTask.hxx"
+#include "Audio.hxx"
+#include "Rfid.hxx"
+#include "Gpio.hxx"
 
 static SPIClass spiVSPI(VSPI);
 static SPIClass spiHSPI(HSPI);
@@ -52,13 +52,13 @@ void setup() {
         return;
     }
 
-    AudioTask::initialize();
-    RfidTask::initialize(spiHSPI, hspiMutex);
-    GpioTask::initialize(spiHSPI, hspiMutex);
+    Audio::initialize();
+    Rfid::initialize(spiHSPI, hspiMutex);
+    Gpio::initialize(spiHSPI, hspiMutex);
 
-    AudioTask::start();
-    RfidTask::start();
-    GpioTask::start();
+    Audio::start();
+    Rfid::start();
+    Gpio::start();
 }
 
 void loop() { vTaskDelete(NULL); }

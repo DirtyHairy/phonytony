@@ -1,9 +1,9 @@
-#ifndef AUDIO_TASK_HXX
-#define AUDIO_TASK_HXX
+#ifndef AUDIO_HXX
+#define AUDIO_HXX
 
 #include "config.h"
 
-namespace AudioTask {
+namespace Audio {
 
 void initialize();
 
@@ -16,6 +16,6 @@ void previous();
 void next();
 void rewind();
 
-}  // namespace AudioTask
+}  // namespace Audio
 
-#endif  // AUDIO_TASK_HXX
+#endif  // AUDIO_HXX

@@ -1,4 +1,4 @@
-#include "RfidTask.hxx"
+#include "Rfid.hxx"
 
 // clang-format off
 #include <freertos/FreeRTOS.h>
@@ -104,12 +104,12 @@ void rfidTask(void*) {
 
 }  // namespace
 
-void RfidTask::initialize(SPIClass& _spi, void* _spiMutex) {
+void Rfid::initialize(SPIClass& _spi, void* _spiMutex) {
     spi = &_spi;
     spiMutex = _spiMutex;
 }
 
-void RfidTask::start() {
+void Rfid::start() {
     TaskHandle_t rfidTaskHandle;
     xTaskCreatePinnedToCore(rfidTask, "rfid", STACK_SIZE_RFID, NULL, TASK_PRIORITY_RFID, &rfidTaskHandle, SERVICE_CORE);
 }
