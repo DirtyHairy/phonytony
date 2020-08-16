@@ -11,6 +11,10 @@
 #include "DirectoryPlayer.hxx"
 
 #define COMMAND_QUEUE_SIZE 3
+#define VOLUME_STEP 10
+#define VOLUME_LIMIT 100
+#define VOLUME_FULL 100
+#define VOLLUME_DEFAULT 20
 
 namespace {
 
@@ -19,6 +23,7 @@ enum class Command : uint8_t { togglePause, volumeDown, volumeUp, previous, next
 QueueHandle_t commandQueue;
 
 bool paused = false;
+int32_t volume = VOLLUME_DEFAULT;
 
 void i2sStreamTask(void* payload) {
     void* buffer = malloc(PLAYBACK_CHUNK_SIZE);
@@ -43,6 +48,10 @@ void executeCommandPause() {
     }
 }
 
+void executeCommandVolumeUp() { volume = std::min((int32_t)VOLUME_LIMIT, volume + VOLUME_STEP); }
+
+void executeCommandVolumeDown() { volume = std::max((int32_t)VOLUME_STEP, volume - VOLUME_STEP); }
+
 void receiveAndHandleCommand() {
     Command command;
 
@@ -50,6 +59,14 @@ void receiveAndHandleCommand() {
         switch (command) {
             case Command::togglePause:
                 executeCommandPause();
+                break;
+
+            case Command::volumeUp:
+                executeCommandVolumeUp();
+                break;
+
+            case Command::volumeDown:
+                executeCommandVolumeDown();
                 break;
 
             default:
@@ -93,7 +110,7 @@ void audioTask_() {
             }
 
             for (int i = 0; i < PLAYBACK_CHUNK_SIZE / 2; i++) {
-                buffer[i] /= 5;
+                buffer[i] = (static_cast<int32_t>(buffer[i]) * volume) / VOLUME_FULL;
             }
 
             xQueueSend(audioQueue, (void*)buffer, portMAX_DELAY);
@@ -129,6 +146,8 @@ void setupI2s() {
     i2s_stop(I2S_NUM_0);
 }
 
+void dispatchCommand(Command command) { xQueueSend(commandQueue, (void*)&command, portMAX_DELAY); }
+
 }  // namespace
 
 void AudioTask::initialize() { commandQueue = xQueueCreate(COMMAND_QUEUE_SIZE, sizeof(Command)); }
@@ -141,8 +160,8 @@ void AudioTask::start() {
                             AUDIO_CORE);
 }
 
-void AudioTask::togglePause() {
-    const Command command = Command::togglePause;
+void AudioTask::togglePause() { dispatchCommand(Command::togglePause); }
 
-    xQueueSend(commandQueue, (void*)&command, portMAX_DELAY);
-}
+void AudioTask::volumeUp() { dispatchCommand(Command::volumeUp); }
+
+void AudioTask::volumeDown() { dispatchCommand(Command::volumeDown); }

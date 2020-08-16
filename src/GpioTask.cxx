@@ -28,8 +28,16 @@ Button buttons[] = {
             AudioTask::togglePause();
         },
         3000, []() { Serial.println("power off"); }),
-    Button(0x02, []() { Serial.println("volume down"); }),
-    Button(0x04, []() { Serial.println("volume up"); }),
+    Button(0x02,
+           []() {
+               Serial.println("volume down");
+               AudioTask::volumeDown();
+           }),
+    Button(0x04,
+           []() {
+               Serial.println("volume up");
+               AudioTask::volumeUp();
+           }),
     Button(0x08, []() { Serial.println("previous"); }),
     Button(0x010, []() { Serial.println("next"); }),
 };

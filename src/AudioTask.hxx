@@ -11,6 +11,10 @@ void start();
 
 void togglePause();
 
+void volumeUp();
+
+void volumeDown();
+
 }  // namespace AudioTask
 
 #endif  // AUDIO_TASK_HXX
