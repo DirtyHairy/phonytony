@@ -11,58 +11,65 @@
 #include "DirectoryPlayer.hxx"
 
 #define COMMAND_QUEUE_SIZE 3
+#define I2S_NUM I2S_NUM_0
 
 namespace {
 
 enum class Command : uint8_t { togglePause, volumeDown, volumeUp, previous, next, rewind };
 
+struct Chunk {
+    bool paused;
+    bool clearDmaBufferOnResume;
+
+    int16_t samples[PLAYBACK_CHUNK_SIZE];
+};
+
 QueueHandle_t commandQueue;
 QueueHandle_t audioQueue;
 
 bool paused = false;
+bool clearDmaBufferOnResume = false;
 int32_t volume = VOLLUME_DEFAULT;
 
 DirectoryPlayer player;
 
-class ResetAudio {
-   public:
-    ResetAudio() {
-        if (paused) {
-            xQueueReset(audioQueue);
-            i2s_zero_dma_buffer(I2S_NUM_0);
-        }
-    }
-
-    ~ResetAudio() {}
-};
-
 void i2sStreamTask(void* payload) {
-    void* buffer = malloc(PLAYBACK_CHUNK_SIZE);
+    Chunk* chunk = new Chunk();
 
     QueueHandle_t* queue = (QueueHandle_t*)payload;
     size_t bytes_written;
+    bool wasPaused = false;
 
     while (true) {
-        xQueueReceive(*queue, buffer, portMAX_DELAY);
+        xQueueReceive(*queue, chunk, portMAX_DELAY);
 
-        i2s_write(I2S_NUM_0, buffer, PLAYBACK_CHUNK_SIZE, &bytes_written, portMAX_DELAY);
+        if (chunk->paused && !wasPaused) i2s_stop(I2S_NUM);
+
+        if (!chunk->paused && wasPaused) {
+            if (chunk->clearDmaBufferOnResume) i2s_zero_dma_buffer(I2S_NUM);
+            i2s_start(I2S_NUM);
+        }
+
+        wasPaused = chunk->paused;
+
+        if (!paused) i2s_write(I2S_NUM, chunk->samples, PLAYBACK_CHUNK_SIZE, &bytes_written, portMAX_DELAY);
     }
 }
 
-void receiveAndHandleCommand() {
+void resetAudio() {
+    if (paused) {
+        clearDmaBufferOnResume = true;
+        xQueueReset(audioQueue);
+    }
+}
+
+void receiveAndHandleCommand(bool block) {
     Command command;
 
-    if (xQueueReceive(commandQueue, (void*)&command, 0) == pdTRUE) {
+    if (xQueueReceive(commandQueue, (void*)&command, block ? portMAX_DELAY : 0) == pdTRUE) {
         switch (command) {
             case Command::togglePause:
                 paused = !paused;
-
-                if (paused) {
-                    i2s_stop(I2S_NUM_0);
-                } else {
-                    i2s_start(I2S_NUM_0);
-                }
-
                 break;
 
             case Command::volumeUp:
@@ -73,32 +80,27 @@ void receiveAndHandleCommand() {
                 volume = std::max((int32_t)VOLUME_STEP, volume - VOLUME_STEP);
                 break;
 
-            case Command::previous: {
-                ResetAudio resetAudio;
+            case Command::previous:
+                resetAudio();
 
                 if (player.trackPosition() / (SAMPLE_RATE / 1000) < REWIND_TIMEOUT)
                     player.previousTrack();
                 else
                     player.rewindTrack();
-            }
 
-            break;
+                break;
 
-            case Command::next: {
-                ResetAudio resetAudio;
-
+            case Command::next:
+                resetAudio();
                 player.nextTrack();
-            }
 
-            break;
+                break;
 
-            case Command::rewind: {
-                ResetAudio resetAudio;
-
+            case Command::rewind:
+                resetAudio();
                 player.rewind();
-            }
 
-            break;
+                break;
 
             default:
                 Serial.printf("unhandled audio command: %i\r\n", (int)command);
@@ -112,37 +114,39 @@ void audioTask_() {
         return;
     }
 
-    int16_t* buffer = (int16_t*)malloc(PLAYBACK_CHUNK_SIZE);
+    Chunk* chunk = new Chunk();
 
     TaskHandle_t task;
     xTaskCreatePinnedToCore(i2sStreamTask, "i2s", STACK_SIZE_I2S, (void*)&audioQueue, TASK_PRIORITY_I2S, &task,
                             AUDIO_CORE);
 
     paused = false;
-    i2s_start(I2S_NUM_0);
+    i2s_start(I2S_NUM);
 
     size_t samplesDecoded = 0;
 
     while (true) {
-        receiveAndHandleCommand();
+        receiveAndHandleCommand(paused);
 
-        if (paused) {
-            delay(50);
-        } else {
+        chunk->paused = paused;
+        chunk->clearDmaBufferOnResume = clearDmaBufferOnResume;
+
+        if (!paused) {
+            clearDmaBufferOnResume = false;
             samplesDecoded = 0;
 
             while (samplesDecoded < PLAYBACK_CHUNK_SIZE / 4) {
-                samplesDecoded += player.decode(buffer, (PLAYBACK_CHUNK_SIZE / 4 - samplesDecoded));
+                samplesDecoded += player.decode(chunk->samples, (PLAYBACK_CHUNK_SIZE / 4 - samplesDecoded));
 
                 if (player.isFinished()) player.rewind();
             }
 
             for (int i = 0; i < PLAYBACK_CHUNK_SIZE / 2; i++) {
-                buffer[i] = (static_cast<int32_t>(buffer[i]) * volume) / VOLUME_FULL;
+                chunk->samples[i] = (static_cast<int32_t>(chunk->samples[i]) * volume) / VOLUME_FULL;
             }
-
-            xQueueSend(audioQueue, (void*)buffer, portMAX_DELAY);
         }
+
+        xQueueSend(audioQueue, (void*)chunk, portMAX_DELAY);
     }
 }
 
@@ -168,10 +172,10 @@ void setupI2s() {
     const i2s_pin_config_t i2s_pins = {
         .bck_io_num = PIN_I2S_BCK, .ws_io_num = PIN_I2S_WC, .data_out_num = PIN_I2S_DATA, .data_in_num = -1};
 
-    i2s_driver_install(I2S_NUM_0, &i2s_config, 0, NULL);
-    i2s_set_pin(I2S_NUM_0, &i2s_pins);
-    i2s_set_clk(I2S_NUM_0, SAMPLE_RATE, I2S_BITS_PER_SAMPLE_16BIT, I2S_CHANNEL_STEREO);
-    i2s_stop(I2S_NUM_0);
+    i2s_driver_install(I2S_NUM, &i2s_config, 0, NULL);
+    i2s_set_pin(I2S_NUM, &i2s_pins);
+    i2s_set_clk(I2S_NUM, SAMPLE_RATE, I2S_BITS_PER_SAMPLE_16BIT, I2S_CHANNEL_STEREO);
+    i2s_stop(I2S_NUM);
 }
 
 void dispatchCommand(Command command) { xQueueSend(commandQueue, (void*)&command, portMAX_DELAY); }
@@ -180,7 +184,7 @@ void dispatchCommand(Command command) { xQueueSend(commandQueue, (void*)&command
 
 void Audio::initialize() {
     commandQueue = xQueueCreate(COMMAND_QUEUE_SIZE, sizeof(Command));
-    audioQueue = xQueueCreate(PLAYBACK_QUEUE_SIZE, PLAYBACK_CHUNK_SIZE);
+    audioQueue = xQueueCreate(PLAYBACK_QUEUE_SIZE, sizeof(Chunk));
 }
 
 void Audio::start() {

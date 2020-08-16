@@ -40,7 +40,7 @@ void setup() {
     pinMode(POWER_PIN, OUTPUT);
     digitalWrite(POWER_PIN, 0);
 
-    delay(100);
+    delay(POWER_ON_DELAY);
 
     Serial.println("power enabled");
 
