@@ -11,12 +11,22 @@
 
 #include "Lock.hxx"
 #include "config.h"
+#include "Button.hxx"
 
 namespace {
 
 DRAM_ATTR QueueHandle_t gpioInterruptQueue;
 SPIClass* spi;
 SemaphoreHandle_t spiMutex;
+
+Button buttons[] = {
+    Button(
+        0x01, []() { Serial.println("play / pause"); }, 3000, []() { Serial.println("power off"); }),
+    Button(0x02, []() { Serial.println("volume down"); }),
+    Button(0x04, []() { Serial.println("volume up"); }),
+    Button(0x08, []() { Serial.println("previous"); }),
+    Button(0x010, []() { Serial.println("next"); }),
+};
 
 extern "C" IRAM_ATTR void gpioIsr() {
     uint32_t val = 1;
@@ -46,21 +56,28 @@ void _gpioTask() {
     }
 
     while (true) {
+        uint64_t timestamp = esp_timer_get_time() / 1000ULL;
+
+        uint32_t timeout = Button::NEVER;
+        for (const Button& button : buttons) timeout = std::min(timeout, button.delayToNextNotification(timestamp));
+
         uint32_t value;
-        if (xQueueReceive(gpioInterruptQueue, &value, 100) != pdTRUE) continue;
+        if (xQueueReceive(gpioInterruptQueue, &value, timeout) == pdTRUE) {
+            uint8_t pins;
 
-        uint16_t signalingPins, pins;
+            {
+                Lock lock(spiMutex);
 
-        {
-            Lock lock(spiMutex);
+                pins = mcp23s17.readPort(1);
+                mcp23s17.getInterruptValue();
+            }
 
-            signalingPins = mcp23s17.getInterruptPins();
-            pins = mcp23s17.getInterruptValue();
+            for (Button& button : buttons) button.updateState(pins);
         }
 
-        uint8_t pushedButtons = (signalingPins >> 8) & (pins >> 8);
+        timestamp = esp_timer_get_time() / 1000ULL;
 
-        if (pushedButtons) Serial.printf("GPIO interrupt: 0x%02x\r\n", pushedButtons);
+        for (Button& button : buttons) button.notify(timestamp);
     }
 }
 

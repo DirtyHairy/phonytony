@@ -32,3 +32,5 @@
 #define STACK_SIZE_AUDIO 0x8000
 #define STACK_SIZE_RFID 0x0800
 #define STACK_SIZE_GPIO 0x0800
+
+#define DEBOUNCE_DELAY (static_cast<uint32_t>(50))
