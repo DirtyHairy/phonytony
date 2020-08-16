@@ -99,7 +99,7 @@ void audioTask_() {
         receiveAndHandleCommand();
 
         if (paused) {
-            delay(100);
+            delay(50);
         } else {
             samplesDecoded = 0;
 

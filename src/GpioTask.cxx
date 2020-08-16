@@ -22,24 +22,24 @@ SemaphoreHandle_t spiMutex;
 
 Button buttons[] = {
     Button(
-        0x01,
+        BTN_PAUSE_MASK,
         []() {
             Serial.println("toggle pause");
             AudioTask::togglePause();
         },
-        3000, []() { Serial.println("power off"); }),
-    Button(0x02,
+        BTN_POWEROFF_DELAY, []() { Serial.println("power off"); }),
+    Button(BTN_VOLUME_DOWN_MASK, BTN_VOLUME_REPEAT,
            []() {
                Serial.println("volume down");
                AudioTask::volumeDown();
            }),
-    Button(0x04,
+    Button(BTN_VOLUME_UP_MASK, BTN_VOLUME_REPEAT,
            []() {
                Serial.println("volume up");
                AudioTask::volumeUp();
            }),
-    Button(0x08, []() { Serial.println("previous"); }),
-    Button(0x010, []() { Serial.println("next"); }),
+    Button(BTN_PREVIOUS_MASK, []() { Serial.println("previous"); }),
+    Button(BTN_NEXT_MASK, []() { Serial.println("next"); }),
 };
 
 extern "C" IRAM_ATTR void gpioIsr() {
@@ -76,7 +76,11 @@ void _gpioTask() {
         for (const Button& button : buttons) timeout = std::min(timeout, button.delayToNextNotification(timestamp));
 
         uint32_t value;
-        if (xQueueReceive(gpioInterruptQueue, &value, timeout) == pdTRUE) {
+        bool pendingInterrupt = xQueueReceive(gpioInterruptQueue, &value, timeout) == pdTRUE;
+
+        timestamp = esp_timer_get_time() / 1000ULL;
+
+        if (pendingInterrupt) {
             uint8_t pins;
 
             {
@@ -86,10 +90,8 @@ void _gpioTask() {
                 mcp23s17.getInterruptValue();
             }
 
-            for (Button& button : buttons) button.updateState(pins);
+            for (Button& button : buttons) button.updateState(pins, timestamp);
         }
-
-        timestamp = esp_timer_get_time() / 1000ULL;
 
         for (Button& button : buttons) button.notify(timestamp);
     }

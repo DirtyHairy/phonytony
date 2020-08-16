@@ -12,9 +12,10 @@ class Button {
 
    public:
     Button(uint8_t pinMask, handlerT handler);
+    Button(uint8_t pinMask, uint32_t repeatDelay, handlerT handler);
     Button(uint8_t pinMask, handlerT handler, uint32_t longPressDelay, handlerT longPressHandler);
 
-    void updateState(uint8_t pins);
+    void updateState(uint8_t pins, uint64_t timestamp);
 
     void notify(uint64_t timestamp);
     uint32_t delayToNextNotification(uint64_t timestamp) const;
@@ -30,7 +31,9 @@ class Button {
     bool longPress{false};
 
     const uint32_t longPressDelay{NEVER};
-    uint64_t lastNotification{0};
+    const uint32_t repeatDelay{NEVER};
+    uint32_t repeat{0};
+    uint64_t lastTimestamp{0};
 
     handlerT stdHandler;
     handlerT longPressHandler;
