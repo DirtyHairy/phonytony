@@ -13,7 +13,8 @@ class Button {
    public:
     Button(uint8_t pinMask, handlerT handler);
     Button(uint8_t pinMask, uint32_t repeatDelay, handlerT handler);
-    Button(uint8_t pinMask, handlerT handler, uint32_t longPressDelay, handlerT longPressHandler);
+    Button(uint8_t pinMask, handlerT handler, uint32_t longPressDelay, handlerT longPressHandler,
+           handlerT longPressUpHandler = handlerT());
 
     void updateState(uint8_t pins, uint64_t timestamp);
 
@@ -37,6 +38,7 @@ class Button {
 
     handlerT stdHandler;
     handlerT longPressHandler;
+    handlerT longPressUpHandler;
 };
 
 #endif  // BUTTON_HXX

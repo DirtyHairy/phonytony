@@ -7,8 +7,13 @@ Button::Button(uint8_t pinMask, handlerT handler) : pinMask(pinMask), stdHandler
 Button::Button(uint8_t pinMask, uint32_t repeatDelay, handlerT handler)
     : pinMask(pinMask), repeatDelay(repeatDelay), stdHandler(handler) {}
 
-Button::Button(uint8_t pinMask, handlerT handler, uint32_t longPressDelay, handlerT longPressHandler)
-    : pinMask(pinMask), longPressDelay(longPressDelay), stdHandler(handler), longPressHandler(longPressHandler) {}
+Button::Button(uint8_t pinMask, handlerT handler, uint32_t longPressDelay, handlerT longPressHandler,
+               handlerT longPressUpHandler)
+    : pinMask(pinMask),
+      longPressDelay(longPressDelay),
+      stdHandler(handler),
+      longPressHandler(longPressHandler),
+      longPressUpHandler(longPressUpHandler) {}
 
 void Button::updateState(uint8_t pins, uint64_t timestamp) {
     const State newState = pins & pinMask ? State::down : State::up;
@@ -35,6 +40,7 @@ void Button::notify(uint64_t timestamp) {
 
             case State::up:
                 if (!longPress && repeat == 0 && stdHandler) stdHandler();
+                if (longPress && longPressUpHandler) longPressUpHandler();
                 break;
         }
 

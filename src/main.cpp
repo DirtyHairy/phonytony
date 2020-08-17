@@ -15,6 +15,7 @@
 #include "Audio.hxx"
 #include "Rfid.hxx"
 #include "Gpio.hxx"
+#include "Power.hxx"
 
 static SPIClass spiVSPI(VSPI);
 static SPIClass spiHSPI(HSPI);
@@ -37,8 +38,13 @@ void setup() {
 
     Serial.begin(115200);
 
-    pinMode(POWER_PIN, OUTPUT);
-    digitalWrite(POWER_PIN, 0);
+    if (Power::isRsesumeFromSleep())
+        Serial.println("resuming from sleep...");
+    else
+        Serial.println("starting from hard reset...");
+
+    pinMode(PIN_POWER, OUTPUT);
+    digitalWrite(PIN_POWER, 0);
 
     delay(POWER_ON_DELAY);
 

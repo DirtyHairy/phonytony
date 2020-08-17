@@ -11,6 +11,8 @@ void start();
 
 void enableAmp();
 
+void disableAmp();
+
 }  // namespace Gpio
 
 #endif  // GPIO_HXX

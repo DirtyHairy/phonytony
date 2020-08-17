@@ -7,6 +7,7 @@
 #include <freertos/queue.h>
 #include <freertos/task.h>
 #include <driver/i2s.h>
+#include <atomic>
 
 #include "DirectoryPlayer.hxx"
 #include "Gpio.hxx"
@@ -29,6 +30,7 @@ QueueHandle_t commandQueue;
 QueueHandle_t audioQueue;
 
 bool paused = false;
+std::atomic<bool> shutdown;
 bool clearDmaBufferOnResume = false;
 int32_t volume = VOLLUME_DEFAULT;
 
@@ -127,9 +129,9 @@ void audioTask_() {
     clearDmaBufferOnResume = false;
 
     while (true) {
-        receiveAndHandleCommand(paused);
+        receiveAndHandleCommand(paused || shutdown);
 
-        chunk->paused = paused;
+        chunk->paused = paused || shutdown;
         chunk->clearDmaBufferOnResume = clearDmaBufferOnResume;
 
         if (!paused) {
@@ -186,6 +188,7 @@ void dispatchCommand(Command command) { xQueueSend(commandQueue, (void*)&command
 void Audio::initialize() {
     commandQueue = xQueueCreate(COMMAND_QUEUE_SIZE, sizeof(Command));
     audioQueue = xQueueCreate(PLAYBACK_QUEUE_SIZE, sizeof(Chunk));
+    shutdown = false;
 }
 
 void Audio::start() {
@@ -207,3 +210,5 @@ void Audio::previous() { dispatchCommand(Command::previous); }
 void Audio::next() { dispatchCommand(Command::next); }
 
 void Audio::rewind() { dispatchCommand(Command::rewind); }
+
+void Audio::prepareSleep() { shutdown = true; }

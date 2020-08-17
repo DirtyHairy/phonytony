@@ -13,6 +13,9 @@
 #include "config.h"
 #include "Button.hxx"
 #include "Audio.hxx"
+#include "Power.hxx"
+
+#define DELAY_BEFORE_SLEEP 100
 
 namespace {
 
@@ -28,7 +31,16 @@ Button buttons[] = {
             Serial.println("toggle pause");
             Audio::togglePause();
         },
-        BTN_POWEROFF_DELAY, []() { Serial.println("power off"); }),
+        BTN_POWEROFF_DELAY,
+        []() {
+            Serial.println("prepare sleep");
+            Power::prepareSleep();
+        },
+        []() {
+            delay(DELAY_BEFORE_SLEEP);
+            Serial.println("sleep");
+            Power::deepSleep();
+        }),
     Button(BTN_VOLUME_DOWN_MASK, BTN_VOLUME_REPEAT,
            []() {
                Serial.println("volume down");
@@ -64,7 +76,7 @@ extern "C" IRAM_ATTR void gpioIsr() {
 }
 
 void _gpioTask() {
-    attachInterrupt(MCP23S17_IRQ, gpioIsr, FALLING);
+    attachInterrupt(PIN_MCP23S17_IRQ, gpioIsr, FALLING);
 
     {
         Lock lock(spiMutex);
@@ -111,10 +123,10 @@ void Gpio::initialize(SPIClass& _spi, void* _spiMutex) {
     spi = &_spi;
     spiMutex = _spiMutex;
 
-    mcp23s17 = new MCP23S17(spi, MCP23S17_CS, 0);
+    mcp23s17 = new MCP23S17(spi, PIN_MCP23S17_CS, 0);
     gpioInterruptQueue = xQueueCreate(1, 4);
 
-    pinMode(MCP23S17_IRQ, INPUT_PULLUP);
+    pinMode(PIN_MCP23S17_IRQ, INPUT_PULLUP);
 
     {
         Lock lock(spiMutex);
@@ -141,4 +153,9 @@ void Gpio::start() {
 void Gpio::enableAmp() {
     Lock lock(spiMutex);
     mcp23s17->digitalWrite(PIN_AMP_ENABLE, HIGH);
+}
+
+void Gpio::disableAmp() {
+    Lock lock(spiMutex);
+    mcp23s17->digitalWrite(PIN_AMP_ENABLE, LOW);
 }
