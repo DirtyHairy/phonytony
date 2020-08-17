@@ -37,6 +37,8 @@
 
 #define DEBOUNCE_DELAY 50
 
+#define PIN_AMP_ENABLE 7
+
 #define BTN_PAUSE_MASK 0x01
 #define BTN_VOLUME_DOWN_MASK 0x02
 #define BTN_VOLUME_UP_MASK 0x04

@@ -9,6 +9,8 @@ void initialize(SPIClass& spi, void* spiMutex);
 
 void start();
 
+void enableAmp();
+
 }  // namespace Gpio
 
 #endif  // GPIO_HXX

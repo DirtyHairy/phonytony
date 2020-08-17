@@ -9,6 +9,7 @@
 #include <driver/i2s.h>
 
 #include "DirectoryPlayer.hxx"
+#include "Gpio.hxx"
 
 #define COMMAND_QUEUE_SIZE 3
 #define I2S_NUM I2S_NUM_0
@@ -115,6 +116,8 @@ void audioTask_() {
     }
 
     Chunk* chunk = new Chunk();
+
+    Gpio::enableAmp();
 
     TaskHandle_t task;
     xTaskCreatePinnedToCore(i2sStreamTask, "i2s", STACK_SIZE_I2S, (void*)&audioQueue, TASK_PRIORITY_I2S, &task,

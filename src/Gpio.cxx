@@ -19,6 +19,7 @@ namespace {
 DRAM_ATTR QueueHandle_t gpioInterruptQueue;
 SPIClass* spi;
 SemaphoreHandle_t spiMutex;
+MCP23S17* mcp23s17;
 
 Button buttons[] = {
     Button(
@@ -63,24 +64,12 @@ extern "C" IRAM_ATTR void gpioIsr() {
 }
 
 void _gpioTask() {
-    MCP23S17 mcp23s17(spi, MCP23S17_CS, 0);
-
-    gpioInterruptQueue = xQueueCreate(1, 4);
-    pinMode(MCP23S17_IRQ, INPUT_PULLUP);
     attachInterrupt(MCP23S17_IRQ, gpioIsr, FALLING);
 
     {
         Lock lock(spiMutex);
 
-        mcp23s17.begin();
-        mcp23s17.setMirror(false);
-        mcp23s17.setInterruptOD(false);
-        mcp23s17.setInterruptLevel(LOW);
-
-        for (uint8_t i = 8; i < 13; i++) {
-            mcp23s17.pinMode(i, INPUT_PULLUP);
-            mcp23s17.enableInterrupt(i, CHANGE);
-        }
+        for (uint8_t i = 8; i < 13; i++) mcp23s17->enableInterrupt(i, CHANGE);
     }
 
     while (true) {
@@ -100,8 +89,8 @@ void _gpioTask() {
             {
                 Lock lock(spiMutex);
 
-                mcp23s17.getInterruptValue();
-                pins = mcp23s17.readPort(1);
+                mcp23s17->getInterruptValue();
+                pins = mcp23s17->readPort(1);
             }
 
             for (Button& button : buttons) button.updateState(pins, timestamp);
@@ -121,9 +110,35 @@ void gpioTask(void*) {
 void Gpio::initialize(SPIClass& _spi, void* _spiMutex) {
     spi = &_spi;
     spiMutex = _spiMutex;
+
+    mcp23s17 = new MCP23S17(spi, MCP23S17_CS, 0);
+    gpioInterruptQueue = xQueueCreate(1, 4);
+
+    pinMode(MCP23S17_IRQ, INPUT_PULLUP);
+
+    {
+        Lock lock(spiMutex);
+
+        mcp23s17->begin();
+        mcp23s17->setMirror(false);
+        mcp23s17->setInterruptOD(false);
+        mcp23s17->setInterruptLevel(LOW);
+
+        mcp23s17->pinMode(PIN_AMP_ENABLE, OUTPUT);
+        mcp23s17->digitalWrite(PIN_AMP_ENABLE, LOW);
+
+        for (uint8_t i = 8; i < 13; i++) {
+            mcp23s17->pinMode(i, INPUT_PULLUP);
+        }
+    }
 }
 
 void Gpio::start() {
     TaskHandle_t gpioTaskHandle;
     xTaskCreatePinnedToCore(gpioTask, "gpio", STACK_SIZE_GPIO, NULL, TASK_PRIORITY_GPIO, &gpioTaskHandle, SERVICE_CORE);
+}
+
+void Gpio::enableAmp() {
+    Lock lock(spiMutex);
+    mcp23s17->digitalWrite(PIN_AMP_ENABLE, HIGH);
 }
