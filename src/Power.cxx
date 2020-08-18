@@ -20,4 +20,4 @@ void Power::prepareSleep() {
     Gpio::disableAmp();
 }
 
-bool Power::isRsesumeFromSleep() { return esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_UNDEFINED; }
+bool Power::isResumeFromSleep() { return esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_UNDEFINED; }

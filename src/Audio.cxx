@@ -4,13 +4,17 @@
 #include <freertos/FreeRTOS.h>
 // clang-format on
 
-#include <freertos/queue.h>
-#include <freertos/task.h>
 #include <driver/i2s.h>
+#include <freertos/queue.h>
+#include <freertos/semphr.h>
+#include <freertos/task.h>
+
 #include <atomic>
 
 #include "DirectoryPlayer.hxx"
 #include "Gpio.hxx"
+#include "Lock.hxx"
+#include "Power.hxx"
 
 #define COMMAND_QUEUE_SIZE 3
 #define I2S_NUM I2S_NUM_0
@@ -26,6 +30,28 @@ struct Chunk {
     int16_t samples[PLAYBACK_CHUNK_SIZE];
 };
 
+struct State {
+    int32_t volume;
+
+    char album[256];
+    uint32_t track;
+    size_t position;
+
+    void setAlbum(const char* album) { strncpy(this->album, album, 255); }
+
+    State& operator=(const State& state) {
+        if (this != &state) {
+            this->volume = state.volume;
+            this->track = state.track;
+            this->position = state.position;
+
+            setAlbum(state.album);
+        }
+
+        return *this;
+    }
+};
+
 QueueHandle_t commandQueue;
 QueueHandle_t audioQueue;
 
@@ -33,6 +59,10 @@ bool paused = false;
 std::atomic<bool> shutdown;
 bool clearDmaBufferOnResume = false;
 int32_t volume = VOLLUME_DEFAULT;
+
+State state;
+RTC_SLOW_ATTR State persistentState;
+SemaphoreHandle_t stateMutex;
 
 DirectoryPlayer player;
 
@@ -66,6 +96,19 @@ void resetAudio() {
     }
 }
 
+void setVolume(int32_t newVolume) {
+    Lock lock(stateMutex);
+
+    state.volume = volume = newVolume;
+}
+
+void updatePlaybackState() {
+    Lock lock(stateMutex);
+
+    state.track = player.getTrack();
+    state.position = player.getSeekPosition();
+}
+
 void receiveAndHandleCommand(bool block) {
     Command command;
 
@@ -76,20 +119,24 @@ void receiveAndHandleCommand(bool block) {
                 break;
 
             case Command::volumeUp:
-                volume = std::min((int32_t)VOLUME_LIMIT, volume + VOLUME_STEP);
+                setVolume(std::min((int32_t)VOLUME_LIMIT, volume + VOLUME_STEP));
+
                 break;
 
             case Command::volumeDown:
-                volume = std::max((int32_t)VOLUME_STEP, volume - VOLUME_STEP);
+                setVolume(state.volume = volume = std::max((int32_t)VOLUME_STEP, volume - VOLUME_STEP));
+
                 break;
 
             case Command::previous:
                 resetAudio();
 
-                if (player.trackPosition() / (SAMPLE_RATE / 1000) < REWIND_TIMEOUT)
+                if (player.getTrackPosition() / (SAMPLE_RATE / 1000) < REWIND_TIMEOUT)
                     player.previousTrack();
                 else
                     player.rewindTrack();
+
+                updatePlaybackState();
 
                 break;
 
@@ -97,11 +144,15 @@ void receiveAndHandleCommand(bool block) {
                 resetAudio();
                 player.nextTrack();
 
+                updatePlaybackState();
+
                 break;
 
             case Command::rewind:
                 resetAudio();
                 player.rewind();
+
+                updatePlaybackState();
 
                 break;
 
@@ -111,10 +162,33 @@ void receiveAndHandleCommand(bool block) {
     }
 }
 
+bool tryToRestore() {
+    if (!Power::isResumeFromSleep()) return false;
+
+    Lock lock(stateMutex);
+
+    volume = state.volume;
+
+    if (!player.open(state.album)) return false;
+
+    if (player.goToTrack(state.track)) player.seekTo(state.position);
+
+    return true;
+}
+
 void audioTask_() {
-    if (!player.open("/album")) {
-        Serial.println("unable to open /album");
-        return;
+    if (!tryToRestore()) {
+        if (!player.open("/album")) {
+            Serial.println("unable to open /album");
+            return;
+        }
+
+        Lock lock(stateMutex);
+
+        state.track = player.getTrack();
+        state.position = player.getSeekPosition();
+        state.volume = volume;
+        state.setAlbum("/album");
     }
 
     Chunk* chunk = new Chunk();
@@ -147,6 +221,8 @@ void audioTask_() {
             for (int i = 0; i < PLAYBACK_CHUNK_SIZE / 2; i++) {
                 chunk->samples[i] = (static_cast<int32_t>(chunk->samples[i]) * volume) / VOLUME_FULL;
             }
+
+            updatePlaybackState();
         }
 
         xQueueSend(audioQueue, (void*)chunk, portMAX_DELAY);
@@ -188,6 +264,15 @@ void dispatchCommand(Command command) { xQueueSend(commandQueue, (void*)&command
 void Audio::initialize() {
     commandQueue = xQueueCreate(COMMAND_QUEUE_SIZE, sizeof(Command));
     audioQueue = xQueueCreate(PLAYBACK_QUEUE_SIZE, sizeof(Chunk));
+
+    stateMutex = xSemaphoreCreateMutex();
+
+    if (Power::isResumeFromSleep()) {
+        Lock lock(stateMutex);
+
+        state = persistentState;
+    }
+
     shutdown = false;
 }
 
@@ -211,4 +296,9 @@ void Audio::next() { dispatchCommand(Command::next); }
 
 void Audio::rewind() { dispatchCommand(Command::rewind); }
 
-void Audio::prepareSleep() { shutdown = true; }
+void Audio::prepareSleep() {
+    shutdown = true;
+
+    Lock lock(stateMutex);
+    persistentState = state;
+}

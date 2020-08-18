@@ -25,18 +25,24 @@ class MadDecoder {
 
     void close();
 
-    uint32_t position() const;
+    uint32_t getPosition() const;
 
     void rewind();
+
+    size_t getSeekPosition();
+    void seekTo(uint32_t position);
 
    private:
     bool bufferChunk();
 
     bool decodeOne(int16_t& sampleL, int16_t& sampleR);
 
+    bool reset(size_t seekPosition = 0);
+
+    void deinit();
+
    private:
     File file;
-    std::string path;
     uint8_t buffer[CHUNK_SIZE];
 
     mad_stream stream;

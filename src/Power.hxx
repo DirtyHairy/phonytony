@@ -7,7 +7,7 @@ void prepareSleep();
 
 void deepSleep();
 
-bool isRsesumeFromSleep();
+bool isResumeFromSleep();
 
 }  // namespace Power
 

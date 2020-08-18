@@ -16,9 +16,25 @@ bool MadDecoder::open(const char* path) {
 
     if (!file) return false;
 
-    this->path = path;
-
     Serial.printf("now playing %s\r\n", path);
+
+    if (!reset()) {
+        close();
+
+        return false;
+    }
+
+#ifdef DEBUG
+    Serial.printf("decoder initialized for file %s\r\n", path);
+#endif
+
+    return true;
+}
+
+bool MadDecoder::reset(size_t seekPosition) {
+    if (!file) return false;
+
+    deinit();
 
     mad_stream_init(&stream);
     mad_frame_init(&frame);
@@ -38,16 +54,9 @@ bool MadDecoder::open(const char* path) {
     leadIn = true;
     eof = false;
 
-    if (!bufferChunk()) {
-        close();
-        return false;
-    }
+    file.seek(seekPosition);
 
-#ifdef DEBUG
-    Serial.printf("decoder initialized for file %s\r\n", path);
-#endif
-
-    return true;
+    return bufferChunk();
 }
 
 bool MadDecoder::bufferChunk() {
@@ -162,6 +171,17 @@ bool MadDecoder::decodeOne(int16_t& sampleL, int16_t& sampleR) {
     return true;
 }
 
+void MadDecoder::deinit() {
+    if (initialized) {
+        mad_stream_finish(&stream);
+        mad_frame_finish(&frame);
+        mad_synth_finish(&synth);
+    }
+
+    finished = true;
+    initialized = false;
+}
+
 void MadDecoder::close() {
     if (file) {
 #ifdef DEBUG
@@ -171,23 +191,17 @@ void MadDecoder::close() {
         file.close();
     }
 
-    if (initialized) {
-        mad_stream_finish(&stream);
-        mad_frame_finish(&frame);
-        mad_synth_finish(&synth);
-    }
-
-    finished = true;
-    initialized = false;
+    deinit();
 
 #ifdef DEBUG
     Serial.println("decoder closed");
 #endif
 }
 
-void MadDecoder::rewind() {
-    close();
-    open(path.c_str());
-}
+void MadDecoder::rewind() { reset(); }
 
-uint32_t MadDecoder::position() const { return totalSamples; }
+uint32_t MadDecoder::getPosition() const { return totalSamples; }
+
+size_t MadDecoder::getSeekPosition() { return file ? file.position() : 0; }
+
+void MadDecoder::seekTo(uint32_t seekPosition) { reset(seekPosition > CHUNK_SIZE ? seekPosition - CHUNK_SIZE : 0); }

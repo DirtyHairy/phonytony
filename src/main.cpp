@@ -38,7 +38,7 @@ void setup() {
 
     Serial.begin(115200);
 
-    if (Power::isRsesumeFromSleep())
+    if (Power::isResumeFromSleep())
         Serial.println("resuming from sleep...");
     else
         Serial.println("starting from hard reset...");

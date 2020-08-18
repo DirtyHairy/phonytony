@@ -13,7 +13,7 @@ class DirectoryReader {
 
     void close();
 
-    const char* getTrack(uint8_t index) { return index < length ? playlist[index] : nullptr; }
+    const char* getTrack(uint32_t index) { return index < length ? playlist[index] : nullptr; }
 
     uint32_t getLength() const { return length; }
 

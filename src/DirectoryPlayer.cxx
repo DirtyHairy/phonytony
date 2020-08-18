@@ -11,8 +11,6 @@ bool DirectoryPlayer::open(const char* dirname) {
 }
 
 void DirectoryPlayer::rewind() {
-    // for (trackIndex = 0; trackIndex < directoryReader.getLength(); trackIndex++)
-    //     if (decoder.open(directoryReader.getTrack(trackIndex))) break;
     trackIndex = 0;
 
     decoder.open(directoryReader.getTrack(trackIndex));
@@ -31,6 +29,16 @@ void DirectoryPlayer::nextTrack() {
     trackIndex = (trackIndex + 1) % directoryReader.getLength();
 
     decoder.open(directoryReader.getTrack(trackIndex));
+}
+
+bool DirectoryPlayer::goToTrack(uint32_t index) {
+    if (index >= directoryReader.getLength()) return false;
+
+    trackIndex = index;
+
+    decoder.open(directoryReader.getTrack(index));
+
+    return true;
 }
 
 uint32_t DirectoryPlayer::decode(int16_t* buffer, uint32_t count) {
@@ -62,4 +70,8 @@ void DirectoryPlayer::close() {
 
 void DirectoryPlayer::rewindTrack() { return decoder.rewind(); }
 
-uint32_t DirectoryPlayer::trackPosition() const { return decoder.position(); }
+uint32_t DirectoryPlayer::getTrackPosition() const { return decoder.getPosition(); }
+
+void DirectoryPlayer::seekTo(size_t frame) { decoder.seekTo(frame); }
+
+size_t DirectoryPlayer::getSeekPosition() { return decoder.getSeekPosition(); }

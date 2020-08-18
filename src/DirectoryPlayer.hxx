@@ -24,7 +24,13 @@ class DirectoryPlayer {
 
     void nextTrack();
 
-    uint32_t trackPosition() const;
+    bool goToTrack(uint32_t index);
+    uint32_t getTrack() { return trackIndex; }
+
+    void seekTo(size_t seekPosition);
+    size_t getSeekPosition();
+
+    uint32_t getTrackPosition() const;
 
     void close();
 
