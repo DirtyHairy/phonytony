@@ -3,6 +3,8 @@
 
 namespace Power {
 
+void initialize();
+
 void prepareSleep();
 
 void deepSleep();

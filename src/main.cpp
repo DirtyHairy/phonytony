@@ -16,6 +16,7 @@
 #include "Rfid.hxx"
 #include "Gpio.hxx"
 #include "Power.hxx"
+#include "Watchdog.hxx"
 
 static SPIClass spiVSPI(VSPI);
 static SPIClass spiHSPI(HSPI);
@@ -61,10 +62,13 @@ void setup() {
     Audio::initialize();
     Rfid::initialize(spiHSPI, hspiMutex);
     Gpio::initialize(spiHSPI, hspiMutex);
+    Power::initialize();
+    Watchdog::initialize();
 
     Audio::start();
     Rfid::start();
     Gpio::start();
+    Watchdog::start();
 }
 
 void loop() { vTaskDelete(NULL); }

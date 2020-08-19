@@ -8,9 +8,10 @@
 #include <SPI.h>
 #include <freertos/queue.h>
 #include <freertos/semphr.h>
+#include <freertos/task.h>
 
-#include <sstream>
 #include <iomanip>
+#include <sstream>
 
 #include "Lock.hxx"
 #include "config.h"

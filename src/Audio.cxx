@@ -15,6 +15,7 @@
 #include "Gpio.hxx"
 #include "Lock.hxx"
 #include "Power.hxx"
+#include "Watchdog.hxx"
 
 #define COMMAND_QUEUE_SIZE 3
 #define I2S_NUM I2S_NUM_0
@@ -203,6 +204,8 @@ void audioTask_() {
     clearDmaBufferOnResume = false;
 
     while (true) {
+        Watchdog::notify();
+
         receiveAndHandleCommand(paused || shutdown);
 
         chunk->paused = paused || shutdown;
