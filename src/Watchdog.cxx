@@ -21,11 +21,10 @@ SemaphoreHandle_t mutex;
 void _watchdogTask() {
     while (true) {
         uint64_t delta;
+        const uint64_t timestamp = esp_timer_get_time();
 
         {
             Lock lock(mutex);
-
-            const uint64_t timestamp = esp_timer_get_time();
             delta = timestamp > lastNotification ? (timestamp - lastNotification) / 1000 : 0;
         }
 
