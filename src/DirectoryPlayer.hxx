@@ -10,7 +10,7 @@ class DirectoryPlayer {
    public:
     DirectoryPlayer();
 
-    bool open(const char* directory);
+    bool open(const char* directory, uint32_t track = 0);
 
     uint32_t decode(int16_t* buffer, uint32_t count);
 

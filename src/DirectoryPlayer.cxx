@@ -2,10 +2,11 @@
 
 DirectoryPlayer::DirectoryPlayer() {}
 
-bool DirectoryPlayer::open(const char* dirname) {
+bool DirectoryPlayer::open(const char* dirname, uint32_t track) {
     if (!directoryReader.open(dirname)) return false;
 
-    rewind();
+    trackIndex = track < directoryReader.getLength() ? track : 0;
+    decoder.open(directoryReader.getTrack(trackIndex));
 
     return true;
 }

@@ -170,9 +170,9 @@ bool tryToRestore() {
 
     volume = state.volume;
 
-    if (!player.open(state.album)) return false;
+    if (!player.open(state.album, state.track)) return false;
 
-    if (player.goToTrack(state.track)) player.seekTo(state.position);
+    if (player.getTrack() == state.track) player.seekTo(state.position);
 
     return true;
 }
