@@ -33,6 +33,11 @@ bool probeSd() {
     return true;
 }
 
+void printStats() {
+    Serial.printf("ESP-IDF version: %s\r\n", esp_get_idf_version());
+    Serial.printf("free heap: %u bytes\r\n", esp_get_free_heap_size());
+}
+
 void setup() {
     setCpuFrequencyMhz(CPU_FREQUENCY);
     hspiMutex = xSemaphoreCreateMutex();
@@ -69,6 +74,10 @@ void setup() {
     Rfid::start();
     Gpio::start();
     Watchdog::start();
+
+    Serial.printf("DIP config %i\r\n", Gpio::readConfigSwitches());
+    delay(500);
+    printStats();
 }
 
 void loop() { vTaskDelete(NULL); }

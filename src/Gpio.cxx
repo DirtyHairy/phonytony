@@ -139,9 +139,8 @@ void Gpio::initialize(SPIClass& _spi, void* _spiMutex) {
         mcp23s17->pinMode(PIN_AMP_ENABLE, OUTPUT);
         mcp23s17->digitalWrite(PIN_AMP_ENABLE, LOW);
 
-        for (uint8_t i = 8; i < 13; i++) {
-            mcp23s17->pinMode(i, INPUT_PULLUP);
-        }
+        for (uint8_t i = 8; i < 13; i++) mcp23s17->pinMode(i, INPUT);
+        for (uint8_t i = 13; i < 16; i++) mcp23s17->pinMode(i, INPUT_PULLUP);
     }
 }
 
@@ -158,4 +157,9 @@ void Gpio::enableAmp() {
 void Gpio::disableAmp() {
     Lock lock(spiMutex);
     mcp23s17->digitalWrite(PIN_AMP_ENABLE, LOW);
+}
+
+uint8_t Gpio::readConfigSwitches() {
+    Lock lock(spiMutex);
+    return (~mcp23s17->readPort(1) & 0xff) >> 6;
 }

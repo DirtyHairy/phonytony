@@ -1,6 +1,8 @@
 #ifndef GPIO_HXX
 #define GPIO_HXX
 
+#include <cstdint>
+
 class SPIClass;
 
 namespace Gpio {
@@ -12,6 +14,8 @@ void start();
 void enableAmp();
 
 void disableAmp();
+
+uint8_t readConfigSwitches();
 
 }  // namespace Gpio
 
