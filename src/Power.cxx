@@ -11,6 +11,7 @@
 
 #include "Audio.hxx"
 #include "Gpio.hxx"
+#include "Led.hxx"
 #include "Lock.hxx"
 #include "config.h"
 
@@ -34,6 +35,7 @@ void Power::deepSleep() {
 void Power::prepareSleep() {
     Audio::prepareSleep();
     Gpio::disableAmp();
+    Led::disable();
 }
 
 bool Power::isResumeFromSleep() { return esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_UNDEFINED; }

@@ -66,3 +66,5 @@ void Led::start() {
     TaskHandle_t ledTaskHandle;
     xTaskCreatePinnedToCore(ledTask, "led", STACK_SIZE_LED, NULL, TASK_PRIORITY_LED, &ledTaskHandle, SERVICE_CORE);
 }
+
+void Led::disable() { Gpio::switchLed(false); }

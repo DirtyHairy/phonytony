@@ -7,6 +7,8 @@ void initialize();
 
 void start();
 
+void disable();
+
 }  // namespace Led
 
 #endif  // LED_HXX
