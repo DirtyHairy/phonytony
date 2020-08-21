@@ -18,6 +18,8 @@ void rewind();
 
 void prepareSleep();
 
+bool isPaused();
+
 }  // namespace Audio
 
 #endif  // AUDIO_HXX

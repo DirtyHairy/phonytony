@@ -17,6 +17,8 @@ void disableAmp();
 
 uint8_t readConfigSwitches();
 
+void switchLed(bool enable);
+
 }  // namespace Gpio
 
 #endif  // GPIO_HXX

@@ -6,17 +6,17 @@
 #include <mad.h>
 // clang-format on
 
-#include "config.h"
-
 #include <SD.h>
 #include <SPI.h>
 #include <freertos/semphr.h>
 
 #include "Audio.hxx"
-#include "Rfid.hxx"
 #include "Gpio.hxx"
+#include "Led.hxx"
 #include "Power.hxx"
+#include "Rfid.hxx"
 #include "Watchdog.hxx"
+#include "config.h"
 
 static SPIClass spiVSPI(VSPI);
 static SPIClass spiHSPI(HSPI);
@@ -69,7 +69,9 @@ void setup() {
     Gpio::initialize(spiHSPI, hspiMutex);
     Power::initialize();
     Watchdog::initialize();
+    Led::initialize();
 
+    Led::start();
     Audio::start();
     Rfid::start();
     Gpio::start();

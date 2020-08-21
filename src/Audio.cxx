@@ -56,7 +56,7 @@ struct State {
 QueueHandle_t commandQueue;
 QueueHandle_t audioQueue;
 
-bool paused = false;
+std::atomic<bool> paused;
 std::atomic<bool> shutdown;
 bool clearDmaBufferOnResume = false;
 int32_t volume = VOLLUME_DEFAULT;
@@ -305,3 +305,5 @@ void Audio::prepareSleep() {
     Lock lock(stateMutex);
     persistentState = state;
 }
+
+bool Audio::isPaused() { return paused; }
