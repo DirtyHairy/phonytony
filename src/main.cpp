@@ -12,6 +12,7 @@
 
 #include "Audio.hxx"
 #include "Gpio.hxx"
+#include "JsonConfig.hxx"
 #include "Led.hxx"
 #include "Power.hxx"
 #include "Rfid.hxx"
@@ -21,6 +22,7 @@
 static SPIClass spiVSPI(VSPI);
 static SPIClass spiHSPI(HSPI);
 static SemaphoreHandle_t hspiMutex;
+static JsonConfig config;
 
 bool probeSd() {
     if (!SD.begin(PIN_SD_CS, spiVSPI, SPI_FREQ_SD)) {
@@ -64,8 +66,12 @@ void setup() {
         return;
     }
 
+    if (!config.load()) {
+        Serial.println("WARNING: failed to load configuration");
+    }
+
     Audio::initialize();
-    Rfid::initialize(spiHSPI, hspiMutex);
+    Rfid::initialize(spiHSPI, hspiMutex, config);
     Gpio::initialize(spiHSPI, hspiMutex);
     Power::initialize();
     Watchdog::initialize();

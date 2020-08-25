@@ -3,13 +3,19 @@
 DirectoryPlayer::DirectoryPlayer() {}
 
 bool DirectoryPlayer::open(const char* dirname, uint32_t track) {
-    if (!directoryReader.open(dirname)) return false;
+    valid = false;
 
-    trackIndex = track < directoryReader.getLength() ? track : 0;
-    decoder.open(directoryReader.getTrack(trackIndex));
+    if (directoryReader.open(dirname)) {
+        trackIndex = track < directoryReader.getLength() ? track : 0;
+        decoder.open(directoryReader.getTrack(trackIndex));
 
-    return true;
+        valid = true;
+    }
+
+    return valid;
 }
+
+bool DirectoryPlayer::isValid() const { return valid; }
 
 void DirectoryPlayer::rewind() {
     trackIndex = 0;

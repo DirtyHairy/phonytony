@@ -12,6 +12,8 @@ class DirectoryPlayer {
 
     bool open(const char* directory, uint32_t track = 0);
 
+    bool isValid() const;
+
     uint32_t decode(int16_t* buffer, uint32_t count);
 
     bool isFinished() { return trackIndex >= directoryReader.getLength(); }
@@ -38,6 +40,8 @@ class DirectoryPlayer {
     MadDecoder decoder;
 
     DirectoryReader directoryReader;
+
+    bool valid{false};
 
     uint32_t trackIndex{0};
 };

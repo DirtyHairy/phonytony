@@ -22,8 +22,6 @@
 
 namespace {
 
-enum class Command : uint8_t { togglePause, volumeDown, volumeUp, previous, next, rewind };
-
 struct Chunk {
     bool paused;
     bool clearDmaBufferOnResume;
@@ -40,6 +38,10 @@ struct State {
 
     void setAlbum(const char* album) { strncpy(this->album, album, 255); }
 
+    void clearAlbum() { album[0] = 0; }
+
+    bool hasAlbum() { return album[0] != 0; }
+
     State& operator=(const State& state) {
         if (this != &state) {
             this->volume = state.volume;
@@ -51,6 +53,18 @@ struct State {
 
         return *this;
     }
+};
+
+struct Command {
+    enum Type : uint8_t { cmdTogglePause, cmdVolumeDown, cmdVolumeUp, cmdPrevious, cmdNext, cmdRewind, cmdPlay };
+
+    Type type;
+    char album[256];
+
+    Command(Type type) : type(type) {}
+    Command() {}
+
+    void setAlbum(const char* album) { strncpy(this->album, album, 255); }
 };
 
 QueueHandle_t commandQueue;
@@ -110,26 +124,47 @@ void updatePlaybackState() {
     state.position = player.getSeekPosition();
 }
 
+std::string directoryForAlbum(const char* album) { return std::string("/music/") + std::string(album); }
+
+void play(const char* album) {
+    Lock lock(stateMutex);
+
+    if (strcmp(state.album, album) == 0 && player.isValid()) {
+        player.rewind();
+        paused = false;
+    } else {
+        paused = !player.open(directoryForAlbum(album).c_str());
+    }
+
+    if (paused) {
+        state.clearAlbum();
+        Serial.printf("failed to open album %s\r\n", album);
+    } else {
+        state.setAlbum(album);
+        Serial.printf("now playing: %s\r\n", album);
+    }
+}
+
 void receiveAndHandleCommand(bool block) {
     Command command;
 
     if (xQueueReceive(commandQueue, (void*)&command, block ? portMAX_DELAY : 0) == pdTRUE) {
-        switch (command) {
-            case Command::togglePause:
+        switch (command.type) {
+            case Command::cmdTogglePause:
                 paused = !paused;
                 break;
 
-            case Command::volumeUp:
+            case Command::cmdVolumeUp:
                 setVolume(std::min((int32_t)VOLUME_LIMIT, volume + VOLUME_STEP));
 
                 break;
 
-            case Command::volumeDown:
+            case Command::cmdVolumeDown:
                 setVolume(state.volume = volume = std::max((int32_t)VOLUME_STEP, volume - VOLUME_STEP));
 
                 break;
 
-            case Command::previous:
+            case Command::cmdPrevious:
                 resetAudio();
 
                 if (player.getTrackPosition() / (SAMPLE_RATE / 1000) < REWIND_TIMEOUT)
@@ -141,7 +176,7 @@ void receiveAndHandleCommand(bool block) {
 
                 break;
 
-            case Command::next:
+            case Command::cmdNext:
                 resetAudio();
                 player.nextTrack();
 
@@ -149,7 +184,7 @@ void receiveAndHandleCommand(bool block) {
 
                 break;
 
-            case Command::rewind:
+            case Command::cmdRewind:
                 resetAudio();
                 player.rewind();
 
@@ -157,8 +192,16 @@ void receiveAndHandleCommand(bool block) {
 
                 break;
 
+            case Command::cmdPlay:
+                resetAudio();
+                play(command.album);
+
+                if (!paused) updatePlaybackState();
+
+                break;
+
             default:
-                Serial.printf("unhandled audio command: %i\r\n", (int)command);
+                Serial.printf("unhandled audio command: %i\r\n", (int)command.type);
         }
     }
 }
@@ -170,27 +213,16 @@ bool tryToRestore() {
 
     volume = state.volume;
 
-    if (!player.open(state.album, state.track)) return false;
-
+    if (!(state.hasAlbum() && player.open(directoryForAlbum(state.album).c_str(), state.track))) return false;
     if (player.getTrack() == state.track) player.seekTo(state.position);
 
     return true;
 }
 
+bool pauseI2s() { return !player.isValid() || paused || shutdown; }
+
 void audioTask_() {
-    if (!tryToRestore()) {
-        if (!player.open("/album")) {
-            Serial.println("unable to open /album");
-            return;
-        }
-
-        Lock lock(stateMutex);
-
-        state.track = player.getTrack();
-        state.position = player.getSeekPosition();
-        state.volume = volume;
-        state.setAlbum("/album");
-    }
+    paused = !tryToRestore();
 
     Chunk* chunk = new Chunk();
 
@@ -200,18 +232,17 @@ void audioTask_() {
     xTaskCreatePinnedToCore(i2sStreamTask, "i2s", STACK_SIZE_I2S, (void*)&audioQueue, TASK_PRIORITY_I2S, &task,
                             AUDIO_CORE);
 
-    paused = false;
     clearDmaBufferOnResume = false;
 
     while (true) {
         Watchdog::notify();
 
-        receiveAndHandleCommand(paused || shutdown);
+        receiveAndHandleCommand(pauseI2s());
 
-        chunk->paused = paused || shutdown;
+        chunk->paused = pauseI2s();
         chunk->clearDmaBufferOnResume = clearDmaBufferOnResume;
 
-        if (!paused) {
+        if (!chunk->paused) {
             clearDmaBufferOnResume = false;
             size_t samplesDecoded = 0;
 
@@ -260,7 +291,9 @@ void setupI2s() {
     i2s_stop(I2S_NUM);
 }
 
-void dispatchCommand(Command command) { xQueueSend(commandQueue, (void*)&command, portMAX_DELAY); }
+void dispatchCommand(const Command& command) { xQueueSend(commandQueue, (void*)&command, portMAX_DELAY); }
+
+void dispatchCommand(Command::Type type) { dispatchCommand(Command(type)); }
 
 }  // namespace
 
@@ -274,6 +307,11 @@ void Audio::initialize() {
         Lock lock(stateMutex);
 
         state = persistentState;
+    } else {
+        Lock lock(stateMutex);
+
+        state.volume = volume;
+        state.clearAlbum();
     }
 
     shutdown = false;
@@ -287,17 +325,24 @@ void Audio::start() {
                             AUDIO_CORE);
 }
 
-void Audio::togglePause() { dispatchCommand(Command::togglePause); }
+void Audio::togglePause() { dispatchCommand(Command::cmdTogglePause); }
 
-void Audio::volumeUp() { dispatchCommand(Command::volumeUp); }
+void Audio::volumeUp() { dispatchCommand(Command::cmdVolumeUp); }
 
-void Audio::volumeDown() { dispatchCommand(Command::volumeDown); }
+void Audio::volumeDown() { dispatchCommand(Command::cmdVolumeDown); }
 
-void Audio::previous() { dispatchCommand(Command::previous); }
+void Audio::previous() { dispatchCommand(Command::cmdPrevious); }
 
-void Audio::next() { dispatchCommand(Command::next); }
+void Audio::next() { dispatchCommand(Command::cmdNext); }
 
-void Audio::rewind() { dispatchCommand(Command::rewind); }
+void Audio::rewind() { dispatchCommand(Command::cmdRewind); }
+
+void Audio::play(const char* album) {
+    Command command(Command::cmdPlay);
+    command.setAlbum(album);
+
+    dispatchCommand(command);
+}
 
 void Audio::prepareSleep() {
     shutdown = true;
@@ -306,4 +351,4 @@ void Audio::prepareSleep() {
     persistentState = state;
 }
 
-bool Audio::isPaused() { return paused; }
+bool Audio::isPlaying() { return player.isValid() && !paused; }

@@ -23,20 +23,20 @@ uint32_t sampleCount;
 uint8_t* samples;
 uint8_t sampleIndex;
 
-bool wasPaused;
+bool wasPlaying;
 
 void _ledTask() {
     Gpio::switchLed(true);
     sampleIndex = 0;
-    wasPaused = Audio::isPaused();
+    wasPlaying = Audio::isPlaying();
 
     while (true) {
-        bool isPaused = Audio::isPaused();
+        bool isPlaying = Audio::isPlaying();
 
-        if (wasPaused != isPaused && isPaused) sampleIndex = 0;
-        wasPaused = isPaused;
+        if (isPlaying != wasPlaying && !isPlaying) sampleIndex = 0;
+        wasPlaying = isPlaying;
 
-        ledcWrite(PWM_CHANNEL, isPaused ? samples[sampleIndex] : 0);
+        ledcWrite(PWM_CHANNEL, isPlaying ? 0 : samples[sampleIndex]);
 
         sampleIndex = (sampleIndex + 1) % sampleCount;
         delay(50);

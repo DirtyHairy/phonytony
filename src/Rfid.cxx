@@ -13,14 +13,20 @@
 #include <iomanip>
 #include <sstream>
 
+#include "Audio.hxx"
+#include "JsonConfig.hxx"
 #include "Lock.hxx"
 #include "config.h"
 
 namespace {
 
 DRAM_ATTR QueueHandle_t rfidInterruptQueue;
-SPIClass* spi;
+
 SemaphoreHandle_t spiMutex;
+SPIClass* spi;
+MFRC522* mfrc522;
+
+const JsonConfig* jsonConfig;
 
 extern "C" IRAM_ATTR void rfidIsr() {
     uint32_t val = 1;
@@ -28,13 +34,13 @@ extern "C" IRAM_ATTR void rfidIsr() {
     xQueueSendFromISR(rfidInterruptQueue, &val, NULL);
 }
 
-void _rfidTask() {
-    MFRC522 mfrc522(*spi);
+bool setupMfrc522() {
+    mfrc522 = new MFRC522(*spi);
 
     {
         Lock lock(spiMutex);
 
-        mfrc522.PCD_Init(PIN_RFID_CS, MFRC522::UNUSED_PIN);
+        mfrc522->PCD_Init(PIN_RFID_CS, MFRC522::UNUSED_PIN);
     }
 
     delay(10);
@@ -43,12 +49,12 @@ void _rfidTask() {
     {
         Lock lock(spiMutex);
 
-        selfTestSucceeded = mfrc522.PCD_PerformSelfTest();
+        selfTestSucceeded = mfrc522->PCD_PerformSelfTest();
     }
 
     if (!selfTestSucceeded) {
         Serial.println("RC522 self test failed");
-        return;
+        return false;
     }
 
     Serial.println("RC522 self test succeeded");
@@ -60,17 +66,31 @@ void _rfidTask() {
     {
         Lock lock(spiMutex);
 
-        mfrc522.PCD_Init();
-        mfrc522.PCD_WriteRegister(mfrc522.ComIEnReg, 0xa0);
+        mfrc522->PCD_Init();
+        mfrc522->PCD_WriteRegister(mfrc522->ComIEnReg, 0xa0);
     }
+
+    return true;
+}
+
+void handleRfid(std::string uid) {
+    if (jsonConfig->isRfidConfigured(uid)) {
+        Audio::play(jsonConfig->albumForRfid(uid).c_str());
+    } else {
+        Serial.printf("scanned unmapped RFID %s\r\n", uid.c_str());
+    }
+}
+
+void _rfidTask() {
+    if (!setupMfrc522()) return;
 
     while (true) {
         {
             Lock lock(spiMutex);
 
-            mfrc522.PCD_WriteRegister(mfrc522.FIFODataReg, mfrc522.PICC_CMD_REQA);
-            mfrc522.PCD_WriteRegister(mfrc522.CommandReg, mfrc522.PCD_Transceive);
-            mfrc522.PCD_WriteRegister(mfrc522.BitFramingReg, 0x87);
+            mfrc522->PCD_WriteRegister(mfrc522->FIFODataReg, mfrc522->PICC_CMD_REQA);
+            mfrc522->PCD_WriteRegister(mfrc522->CommandReg, mfrc522->PCD_Transceive);
+            mfrc522->PCD_WriteRegister(mfrc522->BitFramingReg, 0x87);
         }
 
         uint32_t value;
@@ -81,19 +101,20 @@ void _rfidTask() {
         {
             Lock lock(spiMutex);
 
-            mfrc522.PCD_WriteRegister(mfrc522.ComIrqReg, 0x7f);
-            readSerialSucceeded = mfrc522.PICC_ReadCardSerial();
-            mfrc522.PICC_HaltA();
+            mfrc522->PCD_WriteRegister(mfrc522->ComIrqReg, 0x7f);
+            readSerialSucceeded = mfrc522->PICC_ReadCardSerial();
+            mfrc522->PICC_HaltA();
         }
 
         if (readSerialSucceeded) {
             std::stringstream sstream;
 
-            for (uint8_t i = 0; i < mfrc522.uid.size; i++) {
-                sstream << std::setw(2) << std::setfill('0') << std::hex << (int)mfrc522.uid.uidByte[i] << " ";
+            for (uint8_t i = 0; i < mfrc522->uid.size; i++) {
+                sstream << std::setw(2) << std::setfill('0') << std::hex << (int)mfrc522->uid.uidByte[i];
+                if (i != mfrc522->uid.size - 1) sstream << ":";
             }
 
-            Serial.printf("RFID: %s\r\n", sstream.str().c_str());
+            handleRfid(sstream.str());
         }
     }
 }
@@ -105,9 +126,10 @@ void rfidTask(void*) {
 
 }  // namespace
 
-void Rfid::initialize(SPIClass& _spi, void* _spiMutex) {
+void Rfid::initialize(SPIClass& _spi, void* _spiMutex, const JsonConfig& config) {
     spi = &_spi;
     spiMutex = _spiMutex;
+    jsonConfig = &config;
 }
 
 void Rfid::start() {

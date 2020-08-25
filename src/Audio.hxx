@@ -15,10 +15,11 @@ void volumeDown();
 void previous();
 void next();
 void rewind();
+void play(const char* album);
 
 void prepareSleep();
 
-bool isPaused();
+bool isPlaying();
 
 }  // namespace Audio
 
