@@ -26,7 +26,7 @@ struct Chunk {
     bool paused;
     bool clearDmaBufferOnResume;
 
-    int16_t samples[PLAYBACK_CHUNK_SIZE];
+    int16_t samples[PLAYBACK_CHUNK_SIZE / 2];
 };
 
 struct State {
@@ -100,7 +100,7 @@ void i2sStreamTask(void* payload) {
 
         wasPaused = chunk->paused;
 
-        if (!paused) i2s_write(I2S_NUM, chunk->samples, PLAYBACK_CHUNK_SIZE, &bytes_written, portMAX_DELAY);
+        if (!chunk->paused) i2s_write(I2S_NUM, chunk->samples, PLAYBACK_CHUNK_SIZE, &bytes_written, portMAX_DELAY);
     }
 }
 
@@ -251,7 +251,12 @@ void audioTask_() {
             while (samplesDecoded < PLAYBACK_CHUNK_SIZE / 4) {
                 samplesDecoded += player.decode(chunk->samples, (PLAYBACK_CHUNK_SIZE / 4 - samplesDecoded));
 
-                if (player.isFinished()) player.rewind();
+                if (player.isFinished()) {
+                    memset(chunk->samples + 2 * samplesDecoded, 0, PLAYBACK_CHUNK_SIZE - samplesDecoded * 4);
+
+                    player.rewind();
+                    paused = true;
+                }
             }
 
             for (int i = 0; i < PLAYBACK_CHUNK_SIZE / 2; i++) {

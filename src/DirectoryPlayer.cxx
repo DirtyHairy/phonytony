@@ -51,7 +51,7 @@ bool DirectoryPlayer::goToTrack(uint32_t index) {
 uint32_t DirectoryPlayer::decode(int16_t* buffer, uint32_t count) {
     uint32_t decodedSamples = 0;
 
-    while (decodedSamples < count && trackIndex < directoryReader.getLength()) {
+    while (decodedSamples < count && !isFinished()) {
         if (!decoder.isFinished()) {
             uint32_t decoded = decoder.decode(buffer, count - decodedSamples);
 
@@ -60,10 +60,11 @@ uint32_t DirectoryPlayer::decode(int16_t* buffer, uint32_t count) {
         }
 
         if (decoder.isFinished()) {
-            if (trackIndex < directoryReader.getLength())
-                nextTrack();
-            else
-                rewind();
+            if (++trackIndex < directoryReader.getLength()) {
+                decoder.open(directoryReader.getTrack(trackIndex));
+            } else {
+                decoder.close();
+            }
         }
     }
 

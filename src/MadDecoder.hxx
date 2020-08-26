@@ -21,7 +21,7 @@ class MadDecoder {
 
     uint32_t decode(int16_t* buffer, uint32_t count);
 
-    bool isFinished() const { return finished; };
+    bool isFinished() const { return finished || !initialized; };
 
     void close();
 
