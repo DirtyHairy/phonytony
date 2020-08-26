@@ -6,7 +6,6 @@
 
 #include <SPI.h>
 #include <freertos/queue.h>
-#include <freertos/semphr.h>
 #include <freertos/task.h>
 
 #include <iomanip>
@@ -19,7 +18,7 @@
 
 namespace {
 
-DRAM_ATTR QueueHandle_t rfidInterruptQueue;
+DRAM_ATTR TaskHandle_t rfidTaskHandle;
 
 SemaphoreHandle_t spiMutex;
 SPIClass* spi;
@@ -27,11 +26,7 @@ MFRC522* mfrc522;
 
 const JsonConfig* jsonConfig;
 
-extern "C" IRAM_ATTR void rfidIsr() {
-    uint32_t val = 1;
-
-    xQueueSendFromISR(rfidInterruptQueue, &val, NULL);
-}
+extern "C" IRAM_ATTR void rfidIsr() { xTaskNotifyFromISR(rfidTaskHandle, 0, eNoAction, NULL); }
 
 bool setupMfrc522() {
     mfrc522 = new MFRC522(*spi, spiMutex);
@@ -50,7 +45,6 @@ bool setupMfrc522() {
 
     Serial.println("RC522 self test succeeded");
 
-    rfidInterruptQueue = xQueueCreate(1, 4);
     pinMode(PIN_RFID_IRQ, INPUT);
     attachInterrupt(PIN_RFID_IRQ, rfidIsr, FALLING);
 
@@ -79,8 +73,7 @@ void _rfidTask() {
         mfrc522->PCD_WriteRegister(mfrc522->BitFramingReg, 0x87);
 
         uint32_t value;
-
-        if (xQueuePeek(rfidInterruptQueue, &value, 100) != pdTRUE) continue;
+        if (xTaskNotifyWait(0x0, 0x0, &value, 100) == pdFALSE) continue;
 
         MFRC522::StatusCode readSerialStatus = mfrc522->PICC_Select(&uid);
         MFRC522::StatusCode piccHaltStatus = mfrc522->PICC_HaltA();
@@ -102,7 +95,7 @@ void _rfidTask() {
             Serial.printf("RFID: failed to send HALT to PICC: %i\r\n", (int)readSerialStatus);
 
         mfrc522->PCD_WriteRegister(mfrc522->ComIrqReg, 0x7f);
-        xQueueReceive(rfidInterruptQueue, &value, portMAX_DELAY);
+        xTaskNotifyWait(0x0, 0x0, &value, 0);
     }
 }
 
@@ -120,6 +113,5 @@ void Rfid::initialize(SPIClass& _spi, void* _spiMutex, const JsonConfig& config)
 }
 
 void Rfid::start() {
-    TaskHandle_t rfidTaskHandle;
     xTaskCreatePinnedToCore(rfidTask, "rfid", STACK_SIZE_RFID, NULL, TASK_PRIORITY_RFID, &rfidTaskHandle, SERVICE_CORE);
 }

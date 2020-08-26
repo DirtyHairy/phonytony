@@ -141,7 +141,7 @@ void play(const char* album) {
         Serial.printf("failed to open album %s\r\n", album);
     } else {
         state.setAlbum(album);
-        Serial.printf("now playing: %s\r\n", album);
+        Serial.printf("playback switched to %s\r\n", album);
     }
 }
 
@@ -193,6 +193,8 @@ void receiveAndHandleCommand(bool block) {
                 break;
 
             case Command::cmdPlay:
+                Serial.printf("switching playback to %s\n\r", command.album);
+
                 resetAudio();
                 play(command.album);
 

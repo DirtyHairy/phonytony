@@ -6,7 +6,6 @@
 
 #include <MCP23S17.h>
 #include <SPI.h>
-#include <freertos/queue.h>
 #include <freertos/semphr.h>
 
 #include "Lock.hxx"
@@ -19,7 +18,7 @@
 
 namespace {
 
-DRAM_ATTR QueueHandle_t gpioInterruptQueue;
+DRAM_ATTR TaskHandle_t gpioTaskHandle;
 SPIClass* spi;
 SemaphoreHandle_t spiMutex;
 MCP23S17* mcp23s17;
@@ -69,11 +68,7 @@ Button buttons[] = {
            }),
 };
 
-extern "C" IRAM_ATTR void gpioIsr() {
-    uint32_t val = 1;
-
-    xQueueSendFromISR(gpioInterruptQueue, &val, NULL);
-}
+extern "C" IRAM_ATTR void gpioIsr() { xTaskNotifyFromISR(gpioTaskHandle, 0, eNoAction, NULL); }
 
 void _gpioTask() {
     attachInterrupt(PIN_MCP23S17_IRQ, gpioIsr, FALLING);
@@ -91,7 +86,7 @@ void _gpioTask() {
         for (const Button& button : buttons) timeout = std::min(timeout, button.delayToNextNotification(timestamp));
 
         uint32_t value;
-        bool pendingInterrupt = xQueueReceive(gpioInterruptQueue, &value, timeout) == pdTRUE;
+        bool pendingInterrupt = xTaskNotifyWait(0x0, 0x0, &value, timeout) == pdTRUE;
 
         timestamp = esp_timer_get_time() / 1000ULL;
 
@@ -124,7 +119,6 @@ void Gpio::initialize(SPIClass& _spi, void* _spiMutex) {
     spiMutex = _spiMutex;
 
     mcp23s17 = new MCP23S17(spi, PIN_MCP23S17_CS, 0);
-    gpioInterruptQueue = xQueueCreate(1, 4);
 
     pinMode(PIN_MCP23S17_IRQ, INPUT_PULLUP);
 
@@ -148,7 +142,6 @@ void Gpio::initialize(SPIClass& _spi, void* _spiMutex) {
 }
 
 void Gpio::start() {
-    TaskHandle_t gpioTaskHandle;
     xTaskCreatePinnedToCore(gpioTask, "gpio", STACK_SIZE_GPIO, NULL, TASK_PRIORITY_GPIO, &gpioTaskHandle, SERVICE_CORE);
 }
 
