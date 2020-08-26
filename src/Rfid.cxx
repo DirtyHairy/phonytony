@@ -4,7 +4,6 @@
 #include <freertos/FreeRTOS.h>
 // clang-format on
 
-#include <MFRC522.h>
 #include <SPI.h>
 #include <freertos/queue.h>
 #include <freertos/semphr.h>
@@ -15,7 +14,7 @@
 
 #include "Audio.hxx"
 #include "JsonConfig.hxx"
-#include "Lock.hxx"
+#include "MFRC522/MFRC522.h"
 #include "config.h"
 
 namespace {
@@ -35,22 +34,14 @@ extern "C" IRAM_ATTR void rfidIsr() {
 }
 
 bool setupMfrc522() {
-    mfrc522 = new MFRC522(*spi);
+    mfrc522 = new MFRC522(*spi, spiMutex);
 
-    {
-        Lock lock(spiMutex);
-
-        mfrc522->PCD_Init(PIN_RFID_CS, MFRC522::UNUSED_PIN);
-    }
+    mfrc522->PCD_Init(PIN_RFID_CS, MFRC522::UNUSED_PIN);
 
     delay(10);
 
     bool selfTestSucceeded;
-    {
-        Lock lock(spiMutex);
-
-        selfTestSucceeded = mfrc522->PCD_PerformSelfTest();
-    }
+    selfTestSucceeded = mfrc522->PCD_PerformSelfTest();
 
     if (!selfTestSucceeded) {
         Serial.println("RC522 self test failed");
@@ -63,12 +54,8 @@ bool setupMfrc522() {
     pinMode(PIN_RFID_IRQ, INPUT);
     attachInterrupt(PIN_RFID_IRQ, rfidIsr, FALLING);
 
-    {
-        Lock lock(spiMutex);
-
-        mfrc522->PCD_Init();
-        mfrc522->PCD_WriteRegister(mfrc522->ComIEnReg, 0xa0);
-    }
+    mfrc522->PCD_Init();
+    mfrc522->PCD_WriteRegister(mfrc522->ComIEnReg, 0xa0);
 
     return true;
 }
@@ -85,37 +72,37 @@ void _rfidTask() {
     if (!setupMfrc522()) return;
 
     while (true) {
-        {
-            Lock lock(spiMutex);
+        MFRC522::Uid uid;
 
-            mfrc522->PCD_WriteRegister(mfrc522->FIFODataReg, mfrc522->PICC_CMD_REQA);
-            mfrc522->PCD_WriteRegister(mfrc522->CommandReg, mfrc522->PCD_Transceive);
-            mfrc522->PCD_WriteRegister(mfrc522->BitFramingReg, 0x87);
-        }
+        mfrc522->PCD_WriteRegister(mfrc522->FIFODataReg, mfrc522->PICC_CMD_REQA);
+        mfrc522->PCD_WriteRegister(mfrc522->CommandReg, mfrc522->PCD_Transceive);
+        mfrc522->PCD_WriteRegister(mfrc522->BitFramingReg, 0x87);
 
         uint32_t value;
-        if (xQueueReceive(rfidInterruptQueue, &value, 100) != pdTRUE) continue;
 
-        bool readSerialSucceeded;
+        if (xQueuePeek(rfidInterruptQueue, &value, 100) != pdTRUE) continue;
 
-        {
-            Lock lock(spiMutex);
+        MFRC522::StatusCode readSerialStatus = mfrc522->PICC_Select(&uid);
+        MFRC522::StatusCode piccHaltStatus = mfrc522->PICC_HaltA();
 
-            mfrc522->PCD_WriteRegister(mfrc522->ComIrqReg, 0x7f);
-            readSerialSucceeded = mfrc522->PICC_ReadCardSerial();
-            mfrc522->PICC_HaltA();
-        }
-
-        if (readSerialSucceeded) {
+        if (readSerialStatus == MFRC522::STATUS_OK) {
             std::stringstream sstream;
 
-            for (uint8_t i = 0; i < mfrc522->uid.size; i++) {
-                sstream << std::setw(2) << std::setfill('0') << std::hex << (int)mfrc522->uid.uidByte[i];
-                if (i != mfrc522->uid.size - 1) sstream << ":";
+            for (uint8_t i = 0; i < uid.size; i++) {
+                sstream << std::setw(2) << std::setfill('0') << std::hex << (int)uid.uidByte[i];
+                if (i != uid.size - 1) sstream << ":";
             }
 
             handleRfid(sstream.str());
+        } else {
+            Serial.printf("RFID: failed to read UID: %i\r\n", (int)readSerialStatus);
         }
+
+        if (piccHaltStatus != MFRC522::STATUS_OK)
+            Serial.printf("RFID: failed to send HALT to PICC: %i\r\n", (int)readSerialStatus);
+
+        mfrc522->PCD_WriteRegister(mfrc522->ComIrqReg, 0x7f);
+        xQueueReceive(rfidInterruptQueue, &value, portMAX_DELAY);
     }
 }
 
