@@ -45,7 +45,7 @@ bool setupMfrc522() {
 
     Serial.println("RC522 self test succeeded");
 
-    pinMode(PIN_RFID_IRQ, INPUT);
+    pinMode(PIN_RFID_IRQ, INPUT_PULLUP);
     attachInterrupt(PIN_RFID_IRQ, rfidIsr, FALLING);
 
     mfrc522->PCD_Init();
