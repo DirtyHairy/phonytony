@@ -49,7 +49,6 @@ bool setupMfrc522() {
     attachInterrupt(PIN_RFID_IRQ, rfidIsr, FALLING);
 
     mfrc522->PCD_Init();
-    mfrc522->PCD_WriteRegister(mfrc522->ComIEnReg, 0xa0);
 
     return true;
 }
@@ -67,13 +66,27 @@ void _rfidTask() {
 
     while (true) {
         MFRC522::Uid uid;
-
-        mfrc522->PCD_WriteRegister(mfrc522->FIFODataReg, mfrc522->PICC_CMD_REQA);
-        mfrc522->PCD_WriteRegister(mfrc522->CommandReg, mfrc522->PCD_Transceive);
-        mfrc522->PCD_WriteRegister(mfrc522->BitFramingReg, 0x87);
-
         uint32_t value;
+
+        uint8_t error = mfrc522->PCD_ReadRegister(MFRC522::ErrorReg) & 0xdf;
+        if (error) Serial.printf("MFRC522 error %i\r\n", (int)error);
+
+        mfrc522->PCD_WriteRegister(MFRC522::CommandReg, MFRC522::PCD_Idle);
+        mfrc522->PCD_WriteRegister(MFRC522::ComIEnReg, 0xa0);
+        mfrc522->PCD_WriteRegister(MFRC522::TxModeReg, 0x00);
+        mfrc522->PCD_WriteRegister(MFRC522::RxModeReg, 0x00);
+        mfrc522->PCD_WriteRegister(MFRC522::ModWidthReg, 0x26);
+        mfrc522->PCD_WriteRegister(MFRC522::FIFOLevelReg, 0x80);
+        mfrc522->PCD_WriteRegister(MFRC522::FIFODataReg, MFRC522::PICC_CMD_REQA);
+
+        xTaskNotifyWait(0x0, 0x0, &value, 0);
+
+        mfrc522->PCD_WriteRegister(MFRC522::CommandReg, MFRC522::PCD_Transceive);
+        mfrc522->PCD_WriteRegister(MFRC522::BitFramingReg, 0x87);
+
         if (xTaskNotifyWait(0x0, 0x0, &value, 100) == pdFALSE) continue;
+
+        Serial.println("RFID RX interrupt");
 
         MFRC522::StatusCode readSerialStatus = mfrc522->PICC_Select(&uid);
         MFRC522::StatusCode piccHaltStatus = mfrc522->PICC_HaltA();
@@ -94,8 +107,7 @@ void _rfidTask() {
         if (piccHaltStatus != MFRC522::STATUS_OK)
             Serial.printf("RFID: failed to send HALT to PICC: %i\r\n", (int)readSerialStatus);
 
-        mfrc522->PCD_WriteRegister(mfrc522->ComIrqReg, 0x7f);
-        xTaskNotifyWait(0x0, 0x0, &value, 0);
+        delay(10);
     }
 }
 

@@ -80,7 +80,7 @@
 #include <stdint.h>
 
 #ifndef MFRC522_SPICLOCK
-#define MFRC522_SPICLOCK SPI_CLOCK_DIV4  // MFRC522 accept upto 10MHz
+#define MFRC522_SPICLOCK 10000000  // MFRC522 accept upto 10MHz
 #endif
 
 // Firmware data for self-test
@@ -192,12 +192,11 @@ class MFRC522 {
         AnalogTestReg = 0x38 << 1,    // controls the pins AUX1 and AUX2
         TestDAC1Reg = 0x39 << 1,      // defines the test value for TestDAC1
         TestDAC2Reg = 0x3A << 1,      // defines the test value for TestDAC2
-        TestADCReg =
-            0x3B << 1  // shows the value of ADC I and Q channels
-                       // 						  0x3C			// reserved for
-                       // production tests 						  0x3D			//
-                       // reserved for production tests 0x3E			// reserved for production tests
-                       // 0x3F			// reserved for production tests
+        TestADCReg = 0x3B << 1        // shows the value of ADC I and Q channels
+                                      // 						  0x3C			// reserved for
+                                      // production tests 						  0x3D			//
+                                      // reserved for production tests 0x3E			// reserved for production tests
+                                      // 0x3F			// reserved for production tests
     };
 
     // MFRC522 commands. Described in chapter 10 of the datasheet.
