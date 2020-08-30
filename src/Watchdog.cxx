@@ -10,8 +10,11 @@
 #include <freertos/task.h>
 
 #include "Lock.hxx"
+#include "Log.hxx"
 #include "Power.hxx"
 #include "config.h"
+
+#define TAG "watchdog"
 
 namespace {
 
@@ -29,7 +32,7 @@ void _watchdogTask() {
         }
 
         if (delta >= WATCHDOG_TIMEOUT_SECONDS * 1000) {
-            Serial.println("deep sleep triggered by watchdog");
+            LOG_INFO(TAG, "deep sleep triggered by watchdog");
 
             Power::deepSleep();
 

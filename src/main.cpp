@@ -14,6 +14,7 @@
 #include "Gpio.hxx"
 #include "JsonConfig.hxx"
 #include "Led.hxx"
+#include "Log.hxx"
 #include "Power.hxx"
 #include "Rfid.hxx"
 #include "Watchdog.hxx"
@@ -24,50 +25,55 @@ static SPIClass spiHSPI(HSPI);
 static SemaphoreHandle_t hspiMutex;
 static JsonConfig config;
 
-bool probeSd() {
+#define TAG "main"
+
+bool setupSd() {
     if (!SD.begin(PIN_SD_CS, spiVSPI, SPI_FREQ_SD)) {
-        Serial.println("Failed to initialize SD");
+        LOG_ERROR(TAG, "Failed to initialize SD");
         return false;
     }
 
-    Serial.println("SD card initialized OK");
+    LOG_INFO(TAG, "SD card initialized OK");
 
     return true;
 }
 
 void printStats() {
-    Serial.printf("ESP-IDF version: %s\r\n", esp_get_idf_version());
-    Serial.printf("free heap: %u bytes\r\n", esp_get_free_heap_size());
+    LOG_INFO(TAG, "ESP-IDF version: %s", esp_get_idf_version());
+    LOG_INFO(TAG, "free heap: %u bytes", esp_get_free_heap_size());
 }
 
 void setup() {
     setCpuFrequencyMhz(CPU_FREQUENCY);
+
+    Log::initialize();
+
     hspiMutex = xSemaphoreCreateMutex();
 
-    Serial.begin(115200);
-
     if (Power::isResumeFromSleep())
-        Serial.println("resuming from sleep...");
+        LOG_INFO(TAG, "resuming from sleep...");
     else
-        Serial.println("starting from hard reset...");
+        LOG_INFO(TAG, "starting from hard reset...");
 
     pinMode(PIN_POWER, OUTPUT);
     digitalWrite(PIN_POWER, 0);
 
     delay(POWER_ON_DELAY);
 
-    Serial.println("power enabled");
+    LOG_INFO(TAG, "power enabled");
 
     spiVSPI.begin();
     spiHSPI.begin();
     spiHSPI.setFrequency(HSPI_FREQ);
 
-    if (!probeSd()) {
+    if (!setupSd()) {
         return;
     }
 
+    Log::enableSD();
+
     if (!config.load()) {
-        Serial.println("WARNING: failed to load configuration");
+        LOG_WARN(TAG, "WARNING: failed to load configuration");
     }
 
     Audio::initialize();
@@ -83,7 +89,7 @@ void setup() {
     Gpio::start();
     Watchdog::start();
 
-    Serial.printf("DIP config %i\r\n", Gpio::readConfigSwitches());
+    LOG_INFO(TAG, "DIP config %i", Gpio::readConfigSwitches());
     delay(500);
     printStats();
 }

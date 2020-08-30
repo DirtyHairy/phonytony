@@ -14,7 +14,10 @@
 #include "Audio.hxx"
 #include "JsonConfig.hxx"
 #include "MFRC522/MFRC522.h"
+#include "Log.hxx"
 #include "config.h"
+
+#define TAG "rfid"
 
 namespace {
 
@@ -39,11 +42,11 @@ bool setupMfrc522() {
     selfTestSucceeded = mfrc522->PCD_PerformSelfTest();
 
     if (!selfTestSucceeded) {
-        Serial.println("RC522 self test failed");
+        LOG_ERROR(TAG, "RC522 self test failed");
         return false;
     }
 
-    Serial.println("RC522 self test succeeded");
+    LOG_INFO(TAG, "RC522 self test succeeded");
 
     pinMode(PIN_RFID_IRQ, INPUT_PULLUP);
     attachInterrupt(PIN_RFID_IRQ, rfidIsr, FALLING);
@@ -57,19 +60,26 @@ void handleRfid(std::string uid) {
     if (jsonConfig->isRfidConfigured(uid)) {
         Audio::play(jsonConfig->albumForRfid(uid).c_str());
     } else {
-        Serial.printf("scanned unmapped RFID %s\r\n", uid.c_str());
+        LOG_INFO(TAG, "scanned unmapped RFID %s", uid.c_str());
     }
 }
 
 void _rfidTask() {
     if (!setupMfrc522()) return;
 
+    uint8_t referenceVersion = mfrc522->PCD_ReadRegister(MFRC522::VersionReg);
+
     while (true) {
         MFRC522::Uid uid;
         uint32_t value;
 
         uint8_t error = mfrc522->PCD_ReadRegister(MFRC522::ErrorReg) & 0xdf;
-        if (error) Serial.printf("MFRC522 error %i\r\n", (int)error);
+        if (error) LOG_ERROR(TAG, "MFRC522 error %i", (int)error);
+
+        uint8_t version = mfrc522->PCD_ReadRegister(MFRC522::VersionReg);
+        if (referenceVersion != version)
+            LOG_ERROR(TAG, "failed to read back version: %d != %d; communication with RFID may be down",
+                      (int)referenceVersion, version);
 
         mfrc522->PCD_WriteRegister(MFRC522::CommandReg, MFRC522::PCD_Idle);
         mfrc522->PCD_WriteRegister(MFRC522::ComIEnReg, 0xa0);
@@ -86,7 +96,7 @@ void _rfidTask() {
 
         if (xTaskNotifyWait(0x0, 0x0, &value, 100) == pdFALSE) continue;
 
-        Serial.println("RFID RX interrupt");
+        LOG_INFO(TAG, "RFID RX interrupt");
 
         MFRC522::StatusCode readSerialStatus = mfrc522->PICC_Select(&uid);
         MFRC522::StatusCode piccHaltStatus = mfrc522->PICC_HaltA();
@@ -101,11 +111,11 @@ void _rfidTask() {
 
             handleRfid(sstream.str());
         } else {
-            Serial.printf("RFID: failed to read UID: %i\r\n", (int)readSerialStatus);
+            LOG_INFO(TAG, "RFID: failed to read UID: %i", (int)readSerialStatus);
         }
 
         if (piccHaltStatus != MFRC522::STATUS_OK)
-            Serial.printf("RFID: failed to send HALT to PICC: %i\r\n", (int)readSerialStatus);
+            LOG_ERROR(TAG, "RFID: failed to send HALT to PICC: %i", (int)readSerialStatus);
 
         delay(10);
     }

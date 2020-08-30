@@ -5,6 +5,10 @@
 #include <SD.h>
 #include <StreamUtils.h>
 
+#include "Log.hxx"
+
+#define TAG "json"
+
 namespace {
 
 class SPIRamAllocator {
@@ -21,7 +25,7 @@ using SPIRamJsonDocument = BasicJsonDocument<SPIRamAllocator>;
 bool JsonConfig::load() {
     File configFile = SD.open("/config.json");
     if (!configFile) {
-        Serial.println("config.json not found");
+        LOG_WARN(TAG, "config.json not found");
         return false;
     }
 
@@ -32,7 +36,7 @@ bool JsonConfig::load() {
     configFile.close();
 
     if (err != DeserializationError::Ok) {
-        Serial.printf("Failed to parse config.json: %s\r\n", err.c_str());
+        LOG_ERROR(TAG, "Failed to parse config.json: %s", err.c_str());
 
         return false;
     }
@@ -42,12 +46,12 @@ bool JsonConfig::load() {
     rfidMap.clear();
 
     if (!rfidMapping.is<JsonObject>()) {
-        Serial.println("WARNING: config contains no RFID mappings");
+        LOG_WARN(TAG, "config contains no RFID mappings");
     } else {
         rfidMap.reserve(rfidMapping.as<JsonObject>().size());
 
         for (auto mapping : rfidMapping.as<JsonObject>()) {
-            Serial.printf("RFID mapping: %s -> %s\r\n", mapping.key().c_str(), mapping.value().as<const char*>());
+            LOG_INFO(TAG, "RFID mapping: %s -> %s", mapping.key().c_str(), mapping.value().as<const char*>());
 
             rfidMap[mapping.key().c_str()] = mapping.value().as<std::string>();
         }

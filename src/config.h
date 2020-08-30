@@ -1,3 +1,6 @@
+#define LOG_TO_SD
+#define LOG_LEVEL LOG_LEVEL_INFO
+
 #define PIN_SD_CS GPIO_NUM_5
 
 #define PIN_I2S_BCK GPIO_NUM_26

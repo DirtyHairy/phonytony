@@ -8,12 +8,14 @@
 #include <SPI.h>
 #include <freertos/semphr.h>
 
-#include "Lock.hxx"
-#include "config.h"
-#include "Button.hxx"
 #include "Audio.hxx"
+#include "Button.hxx"
+#include "Lock.hxx"
+#include "Log.hxx"
 #include "Power.hxx"
+#include "config.h"
 
+#define TAG "gpio"
 #define DELAY_BEFORE_SLEEP 100
 
 namespace {
@@ -27,43 +29,43 @@ Button buttons[] = {
     Button(
         BTN_PAUSE_MASK,
         []() {
-            Serial.println("toggle pause");
+            LOG_INFO(TAG, "toggle pause");
             Audio::togglePause();
         },
         BTN_POWEROFF_DELAY,
         []() {
-            Serial.println("prepare sleep");
+            LOG_INFO(TAG, "prepare sleep");
             Power::prepareSleep();
         },
         []() {
             delay(DELAY_BEFORE_SLEEP);
-            Serial.println("sleep");
+            LOG_INFO(TAG, "sleep");
             Power::deepSleep();
         }),
     Button(BTN_VOLUME_DOWN_MASK, BTN_VOLUME_REPEAT,
            []() {
-               Serial.println("volume down");
+               LOG_INFO(TAG, "volume down");
                Audio::volumeDown();
            }),
     Button(BTN_VOLUME_UP_MASK, BTN_VOLUME_REPEAT,
            []() {
-               Serial.println("volume up");
+               LOG_INFO(TAG, "volume up");
                Audio::volumeUp();
            }),
     Button(
         BTN_PREVIOUS_MASK,
         []() {
-            Serial.println("previous");
+            LOG_INFO(TAG, "previous");
             Audio::previous();
         },
         BTN_REWIND_DELAY,
         []() {
             Audio::rewind();
-            Serial.println("rewind");
+            LOG_INFO(TAG, "rewind");
         }),
     Button(BTN_NEXT_MASK, BTN_NEXT_REPEAT,
            []() {
-               Serial.println("next");
+               LOG_INFO(TAG, "next");
                Audio::next();
            }),
 };

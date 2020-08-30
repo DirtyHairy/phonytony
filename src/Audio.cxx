@@ -14,8 +14,11 @@
 #include "DirectoryPlayer.hxx"
 #include "Gpio.hxx"
 #include "Lock.hxx"
+#include "Log.hxx"
 #include "Power.hxx"
 #include "Watchdog.hxx"
+
+#define TAG "audio"
 
 #define COMMAND_QUEUE_SIZE 3
 #define I2S_NUM I2S_NUM_0
@@ -138,10 +141,10 @@ void play(const char* album) {
 
     if (paused) {
         state.clearAlbum();
-        Serial.printf("failed to open album %s\r\n", album);
+        LOG_WARN(TAG, "failed to open album %s", album);
     } else {
         state.setAlbum(album);
-        Serial.printf("playback switched to %s\r\n", album);
+        LOG_INFO(TAG, "playback switched to %s", album);
     }
 }
 
@@ -193,7 +196,7 @@ void receiveAndHandleCommand(bool block) {
                 break;
 
             case Command::cmdPlay:
-                Serial.printf("switching playback to %s\n\r", command.album);
+                LOG_INFO(TAG, "switching playback to %s", command.album);
 
                 resetAudio();
                 play(command.album);
@@ -203,7 +206,7 @@ void receiveAndHandleCommand(bool block) {
                 break;
 
             default:
-                Serial.printf("unhandled audio command: %i\r\n", (int)command.type);
+                LOG_ERROR(TAG, "unhandled audio command: %i", (int)command.type);
         }
     }
 }

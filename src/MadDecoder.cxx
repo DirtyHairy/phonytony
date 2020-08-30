@@ -2,8 +2,9 @@
 
 #include <Arduino.h>
 
-// #define DEBUG
-#define LOG_MAD_ERROR Serial.println(mad_stream_errorstr(&stream));
+#include "Log.hxx"
+
+#define TAG "mp3"
 
 MadDecoder::MadDecoder() {}
 
@@ -16,7 +17,7 @@ bool MadDecoder::open(const char* path) {
 
     if (!file) return false;
 
-    Serial.printf("now playing %s\r\n", path);
+    LOG_INFO(TAG, "now playing %s", path);
 
     if (!reset()) {
         close();
@@ -24,9 +25,7 @@ bool MadDecoder::open(const char* path) {
         return false;
     }
 
-#ifdef DEBUG
-    Serial.printf("decoder initialized for file %s\r\n", path);
-#endif
+    LOG_DEBUG(TAG, "decoder initialized for file %s", path);
 
     return true;
 }
@@ -84,9 +83,7 @@ bool MadDecoder::bufferChunk() {
 
     mad_stream_buffer(&stream, buffer, bytesRead + unused);
 
-#ifdef DEBUG
-    Serial.printf("buffered %lu bytes\r\n", bytesRead);
-#endif
+    LOG_VERBOSE(TAG, "buffered %du bytes", bytesRead);
 
     return true;
 }
@@ -108,9 +105,7 @@ uint32_t MadDecoder::decode(int16_t* buffer, uint32_t count) {
     if (decodedSamples < count) {
         finished = true;
 
-#ifdef DEBUG
-        Serial.printf("decoding finished after %i samples\r\n", decodedSamples);
-#endif
+        LOG_DEBUG(TAG, "decoding finished after %i samples", decodedSamples);
     }
 
     totalSamples += decodedSamples;
@@ -134,11 +129,8 @@ bool MadDecoder::decodeOne(int16_t& sampleL, int16_t& sampleR) {
                 }
 
                 if (!MAD_RECOVERABLE(stream.error)) {
-#ifdef DEBUG
-                    Serial.print("decoding failed with mad error: ");
-                    LOG_MAD_ERROR;
-#endif
-                    return false;
+                    LOG_DEBUG(TAG, "decoding failed with mad error");
+                    LOG_DEBUG(TAG, "%s", mad_stream_errorstr(&stream));
                 }
             }
 
@@ -149,9 +141,8 @@ bool MadDecoder::decodeOne(int16_t& sampleL, int16_t& sampleR) {
         switch (mad_synth_frame_onens(&synth, &frame, ns++)) {
             case MAD_FLOW_STOP:
             case MAD_FLOW_BREAK:
-#ifdef DEBUG
-                Serial.println("mad_synth_frame_onens failed");
-#endif
+
+                LOG_DEBUG(TAG, "mad_synth_frame_onens failed");
 
                 return false;
 
@@ -184,18 +175,14 @@ void MadDecoder::deinit() {
 
 void MadDecoder::close() {
     if (file) {
-#ifdef DEBUG
-        Serial.printf("decoder closed after decoding %lu bytes\r\n", file.position());
-#endif
+        LOG_DEBUG(TAG, "decoder closed after decoding %du bytes", file.position());
 
         file.close();
     }
 
     deinit();
 
-#ifdef DEBUG
-    Serial.println("decoder closed");
-#endif
+    LOG_DEBUG(TAG, "decoder closed");
 }
 
 void MadDecoder::rewind() { reset(); }
