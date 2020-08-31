@@ -48,10 +48,14 @@ bool setupMfrc522() {
 
     LOG_INFO(TAG, "RC522 self test succeeded");
 
+    mfrc522->PCD_Init();
+
+    delay(10);
+
     pinMode(PIN_RFID_IRQ, INPUT_PULLUP);
     attachInterrupt(PIN_RFID_IRQ, rfidIsr, FALLING);
-
-    mfrc522->PCD_Init();
+    mfrc522->PCD_WriteRegister(MFRC522::ComIEnReg, 0xa0);
+    mfrc522->PCD_WriteRegister(MFRC522::DivIEnReg, 0x80);
 
     return true;
 }
@@ -82,7 +86,6 @@ void _rfidTask() {
                       (int)referenceVersion, version);
 
         mfrc522->PCD_WriteRegister(MFRC522::CommandReg, MFRC522::PCD_Idle);
-        mfrc522->PCD_WriteRegister(MFRC522::ComIEnReg, 0xa0);
         mfrc522->PCD_WriteRegister(MFRC522::TxModeReg, 0x00);
         mfrc522->PCD_WriteRegister(MFRC522::RxModeReg, 0x00);
         mfrc522->PCD_WriteRegister(MFRC522::ModWidthReg, 0x26);

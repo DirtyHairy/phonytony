@@ -83,8 +83,8 @@ void setup() {
     Watchdog::initialize();
     Led::initialize();
 
-    Led::start();
     Audio::start();
+    Led::start();
     Rfid::start();
     Gpio::start();
     Watchdog::start();
