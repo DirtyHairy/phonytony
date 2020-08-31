@@ -52,7 +52,7 @@ bool setupMfrc522() {
 
     delay(10);
 
-    pinMode(PIN_RFID_IRQ, INPUT_PULLUP);
+    pinMode(PIN_RFID_IRQ, INPUT);
     attachInterrupt(PIN_RFID_IRQ, rfidIsr, FALLING);
     mfrc522->PCD_WriteRegister(MFRC522::ComIEnReg, 0xa0);
     mfrc522->PCD_WriteRegister(MFRC522::DivIEnReg, 0x80);

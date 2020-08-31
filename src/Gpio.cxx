@@ -122,7 +122,7 @@ void Gpio::initialize(SPIClass& _spi, void* _spiMutex) {
 
     mcp23s17 = new MCP23S17(spi, PIN_MCP23S17_CS, 0);
 
-    pinMode(PIN_MCP23S17_IRQ, INPUT_PULLUP);
+    pinMode(PIN_MCP23S17_IRQ, INPUT);
 
     {
         Lock lock(spiMutex);
