@@ -11,6 +11,8 @@ SOURCE_C = \
 	stdlib_noniso.c
 
 SOURCE_CC = \
+	esp_log.cxx \
+	esp_stubs.cxx \
 	hal_stub.cxx \
 	WString.cxx \
 	Stream.cxx \

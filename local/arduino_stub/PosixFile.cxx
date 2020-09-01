@@ -9,21 +9,21 @@ using std::string;
 #define NOT_IMPLEMENTED(s) throw runtime_error(s);
 
 namespace {
-    int whenceFromSeekMode(SeekMode seekMode) {
-        switch (seekMode) {
-            case SeekSet:
-                return SEEK_SET;
+int whenceFromSeekMode(SeekMode seekMode) {
+    switch (seekMode) {
+        case SeekSet:
+            return SEEK_SET;
 
-            case SeekCur:
-                return SEEK_CUR;
+        case SeekCur:
+            return SEEK_CUR;
 
-            case SeekEnd:
-                return SEEK_END;
+        case SeekEnd:
+            return SEEK_END;
 
-            default:
-                throw runtime_error("bad SeekMode");
-        }
+        default:
+            throw runtime_error("bad SeekMode");
     }
+}
 }  // namespace
 
 PosixFile::PosixFile(FILE* file, string name) : file(file), filename(name) {}
@@ -44,7 +44,18 @@ bool PosixFile::seek(uint32_t pos, SeekMode mode) {
 
 size_t PosixFile::position() const { return file ? ftell(file) : 0; }
 
-size_t PosixFile::size() const { NOT_IMPLEMENTED("PosixFile::size not implemented"); }
+size_t PosixFile::size() const {
+    if (!file) return 0;
+    long pos = ftell(file);
+
+    fseek(file, 0, SEEK_END);
+
+    long size = ftell(file);
+
+    fseek(file, pos, SEEK_SET);
+
+    return size;
+}
 
 void PosixFile::close() {
     if (file) {

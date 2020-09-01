@@ -4,7 +4,7 @@ export CC = gcc
 export CXX = g++
 export LD = g++
 export CFLAGS = -O0 -g -fsanitize=address,undefined
-export CXXFLAGS = $(CFLAGS) -std=c++11 -Wall -Werror
+export CXXFLAGS = $(CFLAGS) -std=c++11 -Wall -Werror -DLOG_LEVEL=LOG_LEVEL_INFO
 export LDFLAGS = -fsanitize=address,undefined
 
 INCLUDE = -I../lib/libmad -I./arduino_stub -I../src

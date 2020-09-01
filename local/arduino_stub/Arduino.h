@@ -91,6 +91,7 @@ typedef unsigned int word;
 #include "Printable.h"
 #include "Print.h"
 #include "Serial.h"
+#include "esp_stubs.h"
 
 using std::abs;
 using std::isinf;
