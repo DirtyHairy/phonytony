@@ -1,7 +1,8 @@
 #ifndef DIRECTORY_PLAYER_HXX
 #define DIRECTORY_PLAYER_HXX
 
-#include <stdint.h>
+#include <cstdint>
+#include <string>
 
 #include "DirectoryReader.hxx"
 #include "MadDecoder.hxx"
@@ -37,6 +38,11 @@ class DirectoryPlayer {
     void close();
 
    private:
+    void openTrack(uint32_t index);
+
+   private:
+    std::string dirname;
+
     MadDecoder decoder;
 
     DirectoryReader directoryReader;

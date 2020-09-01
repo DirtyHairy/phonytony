@@ -1,6 +1,7 @@
 #ifndef DIRECTORY_READER_HXX
 #define DIRECTORY_READER_HXX
 
+#include <FS.h>
 #include <stdint.h>
 
 class DirectoryReader {
@@ -23,6 +24,12 @@ class DirectoryReader {
     char** playlist{nullptr};
 
     uint32_t length{0};
+
+    bool scanDirectory(File& root);
+
+    bool readIndex(File& index);
+
+    void writeIndex(const char* path) const;
 
    private:
     DirectoryReader(const DirectoryReader&) = delete;

@@ -4,10 +4,11 @@ DirectoryPlayer::DirectoryPlayer() {}
 
 bool DirectoryPlayer::open(const char* dirname, uint32_t track) {
     valid = false;
+    this->dirname = dirname;
 
-    if (directoryReader.open(dirname)) {
+    if (directoryReader.open(dirname) && directoryReader.getLength() > 0) {
         trackIndex = track < directoryReader.getLength() ? track : 0;
-        decoder.open(directoryReader.getTrack(trackIndex));
+        openTrack(trackIndex);
 
         valid = true;
     }
@@ -20,7 +21,7 @@ bool DirectoryPlayer::isValid() const { return valid; }
 void DirectoryPlayer::rewind() {
     trackIndex = 0;
 
-    decoder.open(directoryReader.getTrack(trackIndex));
+    openTrack(trackIndex);
 }
 
 void DirectoryPlayer::previousTrack() {
@@ -29,13 +30,13 @@ void DirectoryPlayer::previousTrack() {
         return;
     }
 
-    decoder.open(directoryReader.getTrack(--trackIndex));
+    openTrack(--trackIndex);
 }
 
 void DirectoryPlayer::nextTrack() {
     trackIndex = (trackIndex + 1) % directoryReader.getLength();
 
-    decoder.open(directoryReader.getTrack(trackIndex));
+    openTrack(trackIndex);
 }
 
 bool DirectoryPlayer::goToTrack(uint32_t index) {
@@ -43,7 +44,7 @@ bool DirectoryPlayer::goToTrack(uint32_t index) {
 
     trackIndex = index;
 
-    decoder.open(directoryReader.getTrack(index));
+    openTrack(index);
 
     return true;
 }
@@ -61,7 +62,7 @@ uint32_t DirectoryPlayer::decode(int16_t* buffer, uint32_t count) {
 
         if (decoder.isFinished()) {
             if (++trackIndex < directoryReader.getLength()) {
-                decoder.open(directoryReader.getTrack(trackIndex));
+                openTrack(trackIndex);
             } else {
                 decoder.close();
             }
@@ -74,6 +75,11 @@ uint32_t DirectoryPlayer::decode(int16_t* buffer, uint32_t count) {
 void DirectoryPlayer::close() {
     directoryReader.close();
     decoder.close();
+}
+
+void DirectoryPlayer::openTrack(uint32_t index) {
+    std::string path = dirname + "/" + directoryReader.getTrack(trackIndex);
+    decoder.open(path.c_str());
 }
 
 void DirectoryPlayer::rewindTrack() { return decoder.rewind(); }
