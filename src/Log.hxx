@@ -5,7 +5,7 @@
 
 #include "config.h"
 
-#define ADABOX_LOG_FORMAT(letter, tag) "[" #letter "] [" tag "] (%d) "
+#define PHONYTONY_LOG_FORMAT(letter, tag) "[" #letter "] [" tag "] (%d) "
 
 #define LOG_LEVEL_NONE 0
 #define LOG_LEVEL_ERROR 1
@@ -22,35 +22,35 @@ static_assert(LOG_LEVEL_VERBOSE == ESP_LOG_VERBOSE, "log level definition mismat
 
 #if LOG_LEVEL >= LOG_LEVEL_ERROR
 #define LOG_ERROR(tag, format, ...) \
-    esp_log_write(ESP_LOG_ERROR, tag, ADABOX_LOG_FORMAT(E, tag) format, esp_log_timestamp(), ##__VA_ARGS__)
+    esp_log_write(ESP_LOG_ERROR, tag, PHONYTONY_LOG_FORMAT(E, tag) format, esp_log_timestamp(), ##__VA_ARGS__)
 #else
 #define LOG_ERROR(tag, format, ...)
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_WARN
 #define LOG_WARN(tag, format, ...) \
-    esp_log_write(ESP_LOG_WARN, tag, ADABOX_LOG_FORMAT(W, tag) format, esp_log_timestamp(), ##__VA_ARGS__)
+    esp_log_write(ESP_LOG_WARN, tag, PHONYTONY_LOG_FORMAT(W, tag) format, esp_log_timestamp(), ##__VA_ARGS__)
 #else
 #define LOG_WARN(tag, format, ...)
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_INFO
 #define LOG_INFO(tag, format, ...) \
-    esp_log_write(ESP_LOG_INFO, tag, ADABOX_LOG_FORMAT(I, tag) format, esp_log_timestamp(), ##__VA_ARGS__)
+    esp_log_write(ESP_LOG_INFO, tag, PHONYTONY_LOG_FORMAT(I, tag) format, esp_log_timestamp(), ##__VA_ARGS__)
 #else
 #define LOG_INFO(tag, format, ...)
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_DEBUG
 #define LOG_DEBUG(tag, format, ...) \
-    esp_log_write(ESP_LOG_DEBUG, tag, ADABOX_LOG_FORMAT(D, tag) format, esp_log_timestamp(), ##__VA_ARGS__)
+    esp_log_write(ESP_LOG_DEBUG, tag, PHONYTONY_LOG_FORMAT(D, tag) format, esp_log_timestamp(), ##__VA_ARGS__)
 #else
 #define LOG_DEBUG(tag, format, ...)
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_VERBOSE
 #define LOG_VERBOSE(tag, format, ...) \
-    esp_log_write(ESP_LOG_VERBOSE, tag, ADABOX_LOG_FORMAT(V, tag) format, esp_log_timestamp(), ##__VA_ARGS__)
+    esp_log_write(ESP_LOG_VERBOSE, tag, PHONYTONY_LOG_FORMAT(V, tag) format, esp_log_timestamp(), ##__VA_ARGS__)
 #else
 #define LOG_VERBOSE(tag, format, ...)
 #endif
