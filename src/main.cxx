@@ -43,6 +43,28 @@ void printStats() {
     LOG_INFO(TAG, "free heap: %u bytes", esp_get_free_heap_size());
 }
 
+void logBatteryState() {
+    const char* state;
+    Power::BatteryState batteryState = Power::getBatteryState();
+
+    switch (batteryState.state) {
+        case Power::BatteryState::charging:
+            state = "charging";
+            break;
+
+        case Power::BatteryState::discharging:
+            state = "discharging";
+            break;
+
+        case Power::BatteryState::standby:
+        default:
+            state = "standby";
+            break;
+    }
+
+    LOG_INFO(TAG, "battery %s at %i mV", state, batteryState.voltage);
+}
+
 void setup() {
     setCpuFrequencyMhz(CPU_FREQUENCY);
 
@@ -54,8 +76,9 @@ void setup() {
     spiHSPI.setFrequency(HSPI_FREQ);
 
     Gpio::initialize(spiHSPI, hspiMutex);
+    Power::initialize();
 
-    LOG_INFO(TAG, "TP4200 status: %i", (int)Gpio::readTP4200Status());
+    logBatteryState();
 
     if (Power::isResumeFromSleep())
         LOG_INFO(TAG, "resuming from sleep...");
@@ -81,7 +104,6 @@ void setup() {
 
     Audio::initialize();
     Rfid::initialize(spiHSPI, hspiMutex, config);
-    Power::initialize();
     Watchdog::initialize();
     Led::initialize();
 
