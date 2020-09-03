@@ -49,6 +49,13 @@ void setup() {
     Log::initialize();
 
     hspiMutex = xSemaphoreCreateMutex();
+    spiVSPI.begin();
+    spiHSPI.begin();
+    spiHSPI.setFrequency(HSPI_FREQ);
+
+    Gpio::initialize(spiHSPI, hspiMutex);
+
+    LOG_INFO(TAG, "TP4200 status: %i", (int)Gpio::readTP4200Status());
 
     if (Power::isResumeFromSleep())
         LOG_INFO(TAG, "resuming from sleep...");
@@ -62,10 +69,6 @@ void setup() {
 
     LOG_INFO(TAG, "power enabled");
 
-    spiVSPI.begin();
-    spiHSPI.begin();
-    spiHSPI.setFrequency(HSPI_FREQ);
-
     if (!setupSd()) {
         return;
     }
@@ -78,7 +81,6 @@ void setup() {
 
     Audio::initialize();
     Rfid::initialize(spiHSPI, hspiMutex, config);
-    Gpio::initialize(spiHSPI, hspiMutex);
     Power::initialize();
     Watchdog::initialize();
     Led::initialize();
@@ -89,7 +91,7 @@ void setup() {
     Gpio::start();
     Watchdog::start();
 
-    LOG_INFO(TAG, "DIP config %i", Gpio::readConfigSwitches());
+    LOG_INFO(TAG, "DIP config %i", (int)Gpio::readConfigSwitches());
     delay(500);
     printStats();
 }

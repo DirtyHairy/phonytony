@@ -132,14 +132,15 @@ void Gpio::initialize(SPIClass& _spi, void* _spiMutex) {
         mcp23s17->setInterruptOD(false);
         mcp23s17->setInterruptLevel(LOW);
 
-        mcp23s17->pinMode(PIN_AMP_ENABLE, OUTPUT);
-        mcp23s17->digitalWrite(PIN_AMP_ENABLE, LOW);
+        mcp23s17->pinMode(PIN_AMP_ENABLE_MCP, OUTPUT);
+        mcp23s17->digitalWrite(PIN_AMP_ENABLE_MCP, LOW);
 
         mcp23s17->pinMode(PIN_LED_MCP, OUTPUT);
         mcp23s17->digitalWrite(PIN_LED_MCP, LOW);
 
         for (uint8_t i = 8; i < 13; i++) mcp23s17->pinMode(i, INPUT);
-        for (uint8_t i = 13; i < 16; i++) mcp23s17->pinMode(i, INPUT_PULLUP);
+        for (uint8_t i = 8 + DIP_SWITCH_SHIFT; i <= 9 + DIP_SWITCH_SHIFT; i++) mcp23s17->pinMode(i, INPUT_PULLUP);
+        for (uint8_t i = TP4200_STATUS_SHIFT; i <= 1 + TP4200_STATUS_SHIFT; i++) mcp23s17->pinMode(i, INPUT_PULLUP);
     }
 }
 
@@ -149,20 +150,34 @@ void Gpio::start() {
 
 void Gpio::enableAmp() {
     Lock lock(spiMutex);
-    mcp23s17->digitalWrite(PIN_AMP_ENABLE, HIGH);
+    mcp23s17->digitalWrite(PIN_AMP_ENABLE_MCP, HIGH);
 }
 
 void Gpio::disableAmp() {
     Lock lock(spiMutex);
-    mcp23s17->digitalWrite(PIN_AMP_ENABLE, LOW);
+    mcp23s17->digitalWrite(PIN_AMP_ENABLE_MCP, LOW);
 }
 
 uint8_t Gpio::readConfigSwitches() {
     Lock lock(spiMutex);
-    return (~mcp23s17->readPort(1) & 0xff) >> 6;
+    return (~mcp23s17->readPort(1) >> DIP_SWITCH_SHIFT) & 0x03;
+}
+
+uint8_t Gpio::readTP4200Status() {
+    Lock lock(spiMutex);
+    return (~mcp23s17->readPort(0) >> TP4200_STATUS_SHIFT) & 0x03;
 }
 
 void Gpio::switchLed(bool enable) {
     Lock lock(spiMutex);
     mcp23s17->digitalWrite(PIN_LED_MCP, enable ? HIGH : LOW);
+}
+
+void Gpio::prepareSleep() {
+    Lock lock(spiMutex);
+
+    for (uint8_t i = 8 + DIP_SWITCH_SHIFT; i <= 9 + DIP_SWITCH_SHIFT; i++) mcp23s17->pinMode(i, INPUT);
+    for (uint8_t i = TP4200_STATUS_SHIFT; i <= 1 + TP4200_STATUS_SHIFT; i++) mcp23s17->pinMode(i, INPUT);
+    mcp23s17->pinMode(PIN_LED_MCP, INPUT);
+    mcp23s17->pinMode(PIN_AMP_ENABLE_MCP, INPUT);
 }

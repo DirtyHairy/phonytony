@@ -17,7 +17,11 @@ void disableAmp();
 
 uint8_t readConfigSwitches();
 
+uint8_t readTP4200Status();
+
 void switchLed(bool enable);
+
+void prepareSleep();
 
 }  // namespace Gpio
 
