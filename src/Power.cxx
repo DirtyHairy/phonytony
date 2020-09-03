@@ -56,11 +56,11 @@ uint32_t measureVoltage() {
 }
 
 Power::BatteryState::State getState() {
-    uint8_t tp5600Status = Gpio::readTP5600Status();
+    uint8_t tp5400Status = Gpio::readTP5400Status();
 
-    if (tp5600Status & 0x01) {
+    if (tp5400Status & 0x01) {
         return Power::BatteryState::State::standby;
-    } else if (tp5600Status & 0x02) {
+    } else if (tp5400Status & 0x02) {
         return Power::BatteryState::charging;
     } else {
         return Power::BatteryState::discharging;

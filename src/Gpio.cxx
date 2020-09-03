@@ -140,7 +140,7 @@ void Gpio::initialize(SPIClass& _spi, void* _spiMutex) {
 
         for (uint8_t i = 8; i < 13; i++) mcp23s17->pinMode(i, INPUT);
         for (uint8_t i = 8 + DIP_SWITCH_SHIFT; i <= 9 + DIP_SWITCH_SHIFT; i++) mcp23s17->pinMode(i, INPUT_PULLUP);
-        for (uint8_t i = TP5600_STATUS_SHIFT; i <= 1 + TP5600_STATUS_SHIFT; i++) mcp23s17->pinMode(i, INPUT_PULLUP);
+        for (uint8_t i = TP5400_STATUS_SHIFT; i <= 1 + TP5400_STATUS_SHIFT; i++) mcp23s17->pinMode(i, INPUT_PULLUP);
     }
 }
 
@@ -163,9 +163,9 @@ uint8_t Gpio::readConfigSwitches() {
     return (~mcp23s17->readPort(1) >> DIP_SWITCH_SHIFT) & 0x03;
 }
 
-uint8_t Gpio::readTP5600Status() {
+uint8_t Gpio::readTP5400Status() {
     Lock lock(spiMutex);
-    return (~mcp23s17->readPort(0) >> TP5600_STATUS_SHIFT) & 0x03;
+    return (~mcp23s17->readPort(0) >> TP5400_STATUS_SHIFT) & 0x03;
 }
 
 void Gpio::switchLed(bool enable) {

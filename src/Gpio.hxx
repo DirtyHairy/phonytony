@@ -17,7 +17,7 @@ void disableAmp();
 
 uint8_t readConfigSwitches();
 
-uint8_t readTP5600Status();
+uint8_t readTP5400Status();
 
 void switchLed(bool enable);
 
