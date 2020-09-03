@@ -50,11 +50,8 @@ bool JsonConfig::load() {
     } else {
         rfidMap.reserve(rfidMapping.as<JsonObject>().size());
 
-        for (auto mapping : rfidMapping.as<JsonObject>()) {
-            LOG_INFO(TAG, "RFID mapping: %s -> %s", mapping.key().c_str(), mapping.value().as<const char*>());
-
+        for (auto mapping : rfidMapping.as<JsonObject>())
             rfidMap[mapping.key().c_str()] = mapping.value().as<std::string>();
-        }
     }
 
     return true;

@@ -58,8 +58,6 @@ uint32_t measureVoltage() {
 Power::BatteryState::State getState() {
     uint8_t tp5600Status = Gpio::readTP5600Status();
 
-    LOG_INFO(TAG, "tp4200 state: %i", tp5600Status);
-
     if (tp5600Status & 0x01) {
         return Power::BatteryState::State::standby;
     } else if (tp5600Status & 0x02) {
