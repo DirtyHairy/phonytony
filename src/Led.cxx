@@ -16,6 +16,7 @@
 #define PWM_CHANNEL 0
 #define PWM_FREQ 10000
 #define PWM_RESOLUTION 8
+#define _PI 3.1415926535897932384626433832795f
 
 namespace {
 
@@ -59,7 +60,8 @@ void Led::initialize() {
     samples = (uint8_t*)malloc(sampleCount);
 
     for (uint8_t i = 0; i < sampleCount; i++)
-        samples[i] = 255 - floorf(powf((cosf(2. * PI * i / static_cast<float>(sampleCount)) + 1.) / 2., 0.75) * 255.);
+        samples[i] =
+            255 - floorf(powf((cosf(2.f * _PI * i / static_cast<float>(sampleCount)) + 1.f) / 2.f, 0.75f) * 255.f);
 }
 
 void Led::start() {
