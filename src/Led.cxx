@@ -59,7 +59,7 @@ void Led::initialize() {
     samples = (uint8_t*)malloc(sampleCount);
 
     for (uint8_t i = 0; i < sampleCount; i++)
-        samples[i] = 255 - floor(pow((cos(2. * PI * i / static_cast<double>(sampleCount)) + 1.) / 2., 0.75) * 255.);
+        samples[i] = 255 - floorf(powf((cosf(2. * PI * i / static_cast<float>(sampleCount)) + 1.) / 2., 0.75) * 255.);
 }
 
 void Led::start() {
