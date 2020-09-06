@@ -16,6 +16,7 @@
 #include "Lock.hxx"
 #include "Log.hxx"
 #include "Power.hxx"
+#include "Signal.hxx"
 #include "Watchdog.hxx"
 
 #define TAG "audio"
@@ -82,6 +83,7 @@ State state;
 RTC_SLOW_ATTR State persistentState;
 SemaphoreHandle_t stateMutex;
 
+Signal signal;
 DirectoryPlayer player;
 
 void i2sStreamTask(void* payload) {
@@ -199,9 +201,13 @@ void receiveAndHandleCommand(bool block) {
                 LOG_INFO(TAG, "switching playback to %s", command.album);
 
                 resetAudio();
+
                 play(command.album);
 
-                if (!paused) updatePlaybackState();
+                if (!paused) {
+                    signal.start(Signal::commandReceived);
+                    updatePlaybackState();
+                }
 
                 break;
 
@@ -224,7 +230,7 @@ bool tryToRestore() {
     return true;
 }
 
-bool pauseI2s() { return !player.isValid() || paused || shutdown; }
+bool pauseI2s() { return ((!player.isValid() || paused) && !signal.isActive()) || shutdown; }
 
 void audioTask_() {
     paused = !tryToRestore();
@@ -252,13 +258,19 @@ void audioTask_() {
             size_t samplesDecoded = 0;
 
             while (samplesDecoded < PLAYBACK_CHUNK_SIZE / 4) {
-                samplesDecoded += player.decode(chunk->samples, (PLAYBACK_CHUNK_SIZE / 4 - samplesDecoded));
+                if (signal.isActive()) {
+                    samplesDecoded += signal.play(chunk->samples, (PLAYBACK_CHUNK_SIZE / 4 - samplesDecoded));
+                } else if (!paused && player.isValid()) {
+                    samplesDecoded += player.decode(chunk->samples, (PLAYBACK_CHUNK_SIZE / 4 - samplesDecoded));
 
-                if (player.isFinished()) {
+                    if (player.isFinished()) {
+                        player.rewind();
+                        paused = true;
+                    }
+                } else {
                     memset(chunk->samples + 2 * samplesDecoded, 0, PLAYBACK_CHUNK_SIZE - samplesDecoded * 4);
 
-                    player.rewind();
-                    paused = true;
+                    break;
                 }
             }
 
