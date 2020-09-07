@@ -221,7 +221,9 @@ void receiveAndHandleCommand(bool block) {
                 break;
 
             case Command::cmdSignalError:
+                resetAudio();
                 signal.start(Signal::error);
+
                 break;
 
             default:
