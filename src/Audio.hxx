@@ -21,6 +21,8 @@ void prepareSleep();
 
 bool isPlaying();
 
+void signalError();
+
 }  // namespace Audio
 
 #endif  // AUDIO_HXX

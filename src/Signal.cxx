@@ -2,17 +2,26 @@
 
 #include <cmath>
 
+#include "Lock.hxx"
+
 #define SAMPLE_RATE 44100
 #define _PI 3.1415926535897932384626433832795f
+#define AMPLITUDE 0x0fff
 
 namespace {
 
 const Signal::Step signalCommandReceived[] = {{.note = 0, .duration = 50, .amplitude = 0},
-                                              {.note = 36, .duration = 100, .amplitude = 0x0fff},
+                                              {.note = 36, .duration = 100, .amplitude = AMPLITUDE},
                                               {.note = 0, .duration = 50, .amplitude = 0},
                                               {.note = 0, .duration = 0, .amplitude = 0}};
 
-const Signal::Step* signals[] = {signalCommandReceived};
+const Signal::Step signalError[] = {{.note = 0, .duration = 100, .amplitude = 0},
+                                    {.note = 34, .duration = 200, .amplitude = AMPLITUDE},
+                                    {.note = 22, .duration = 200, .amplitude = AMPLITUDE},
+                                    {.note = 0, .duration = 100, .amplitude = 0},
+                                    {.note = 0, .duration = 0, .amplitude = 0}};
+
+const Signal::Step* signals[] = {signalCommandReceived, signalError};
 
 const float frequencies[49] = {0.,
                                130.8127826502992f,

@@ -60,7 +60,16 @@ struct State {
 };
 
 struct Command {
-    enum Type : uint8_t { cmdTogglePause, cmdVolumeDown, cmdVolumeUp, cmdPrevious, cmdNext, cmdRewind, cmdPlay };
+    enum Type : uint8_t {
+        cmdTogglePause,
+        cmdVolumeDown,
+        cmdVolumeUp,
+        cmdPrevious,
+        cmdNext,
+        cmdRewind,
+        cmdPlay,
+        cmdSignalError
+    };
 
     Type type;
     char album[256];
@@ -209,6 +218,10 @@ void receiveAndHandleCommand(bool block) {
                     updatePlaybackState();
                 }
 
+                break;
+
+            case Command::cmdSignalError:
+                signal.start(Signal::error);
                 break;
 
             default:
@@ -374,3 +387,5 @@ void Audio::prepareSleep() {
 }
 
 bool Audio::isPlaying() { return player.isValid() && !paused; }
+
+void Audio::signalError() { dispatchCommand(Command::cmdSignalError); }

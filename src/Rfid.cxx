@@ -64,6 +64,7 @@ void handleRfid(std::string uid) {
     if (jsonConfig->isRfidConfigured(uid)) {
         Audio::play(jsonConfig->albumForRfid(uid).c_str());
     } else {
+        Audio::signalError();
         LOG_INFO(TAG, "scanned unmapped RFID %s", uid.c_str());
     }
 }

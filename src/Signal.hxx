@@ -5,7 +5,7 @@
 
 class Signal {
    public:
-    enum Type : uint8_t { commandReceived = 0 };
+    enum Type : uint8_t { commandReceived = 0, error = 1 };
 
     struct Step {
         uint8_t note;
