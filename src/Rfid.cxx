@@ -91,10 +91,8 @@ void _rfidTask() {
         mfrc522->PCD_WriteRegister(MFRC522::ModWidthReg, 0x26);
         mfrc522->PCD_WriteRegister(MFRC522::FIFOLevelReg, 0x80);
         mfrc522->PCD_WriteRegister(MFRC522::FIFODataReg, MFRC522::PICC_CMD_REQA);
-
-        xTaskNotifyWait(0x0, 0x0, &value, 0);
-
         mfrc522->PCD_WriteRegister(MFRC522::CommandReg, MFRC522::PCD_Transceive);
+        mfrc522->PCD_WriteRegister(MFRC522::ComIrqReg, 0x7f);
         mfrc522->PCD_WriteRegister(MFRC522::BitFramingReg, 0x87);
 
         if (xTaskNotifyWait(0x0, 0x0, &value, 100) == pdFALSE) continue;
@@ -120,7 +118,7 @@ void _rfidTask() {
         if (piccHaltStatus != MFRC522::STATUS_OK)
             LOG_ERROR(TAG, "RFID: failed to send HALT to PICC: %i", (int)readSerialStatus);
 
-        delay(10);
+        xTaskNotifyWait(0x0, 0x0, &value, 0);
     }
 }
 

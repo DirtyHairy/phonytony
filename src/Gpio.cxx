@@ -88,6 +88,12 @@ void _gpioTask() {
         for (const Button& button : buttons) timeout = std::min(timeout, button.delayToNextNotification(timestamp));
 
         uint32_t value;
+
+        {
+            Lock lock(spiMutex);
+            mcp23s17->getInterruptValue();
+        }
+
         bool pendingInterrupt = xTaskNotifyWait(0x0, 0x0, &value, timeout) == pdTRUE;
 
         timestamp = esp_timer_get_time() / 1000ULL;
