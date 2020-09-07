@@ -150,6 +150,11 @@ void Gpio::initialize(SPIClass& _spi, void* _spiMutex) {
     }
 }
 
+void Gpio::prepareSleep() {
+    for (uint8_t i = 8 + DIP_SWITCH_SHIFT; i <= 9 + DIP_SWITCH_SHIFT; i++) mcp23s17->pinMode(i, INPUT);
+    for (uint8_t i = TP5400_STATUS_SHIFT; i <= 1 + TP5400_STATUS_SHIFT; i++) mcp23s17->pinMode(i, INPUT);
+}
+
 void Gpio::start() {
     xTaskCreatePinnedToCore(gpioTask, "gpio", STACK_SIZE_GPIO, NULL, TASK_PRIORITY_GPIO, &gpioTaskHandle, SERVICE_CORE);
 }

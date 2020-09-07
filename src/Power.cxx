@@ -104,6 +104,7 @@ void Power::prepareSleep() {
     Audio::prepareSleep();
     Gpio::disableAmp();
     Led::disable();
+    Gpio::prepareSleep();
 }
 
 bool Power::isResumeFromSleep() { return esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_UNDEFINED; }
