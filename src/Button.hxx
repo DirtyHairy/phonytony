@@ -22,12 +22,12 @@ class Button {
     uint32_t delayToNextNotification(uint64_t timestamp) const;
 
    private:
-    enum class State { up, down };
+    enum class State { up, down, poweron };
 
    private:
     const uint8_t pinMask;
 
-    State state{State::up};
+    State state{State::poweron};
     bool pending{false};
     bool longPress{false};
 

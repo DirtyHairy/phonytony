@@ -18,7 +18,7 @@ Button::Button(uint8_t pinMask, handlerT handler, uint32_t longPressDelay, handl
 void Button::updateState(uint8_t pins, uint64_t timestamp) {
     const State newState = pins & pinMask ? State::down : State::up;
 
-    if (newState == state) return;
+    if (newState == state || (state == State::poweron && newState == State::up)) return;
 
     state = newState;
     lastTimestamp = timestamp;
@@ -41,6 +41,9 @@ void Button::notify(uint64_t timestamp) {
             case State::up:
                 if (!longPress && repeat == 0 && stdHandler) stdHandler();
                 if (longPress && longPressUpHandler) longPressUpHandler();
+                break;
+
+            case State::poweron:
                 break;
         }
 

@@ -183,3 +183,8 @@ void Gpio::switchLed(bool enable) {
     Lock lock(spiMutex);
     mcp23s17->digitalWrite(PIN_LED_MCP, enable ? HIGH : LOW);
 }
+
+bool Gpio::silentStart() {
+    Lock lock(spiMutex);
+    return mcp23s17->readPort(1) & (BTN_VOLUME_UP_MASK | BTN_VOLUME_DOWN_MASK | BTN_NEXT_MASK | BTN_PREVIOUS_MASK);
+}

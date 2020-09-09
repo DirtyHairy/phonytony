@@ -76,6 +76,8 @@ void setup() {
     spiHSPI.setFrequency(HSPI_FREQ);
 
     Gpio::initialize(spiHSPI, hspiMutex);
+    bool silentStart = Gpio::silentStart();
+
     Power::initialize();
 
     logBatteryState();
@@ -107,7 +109,7 @@ void setup() {
     Watchdog::initialize();
     Led::initialize();
 
-    Audio::start();
+    Audio::start(silentStart);
     Led::start();
     Rfid::start();
     Gpio::start();

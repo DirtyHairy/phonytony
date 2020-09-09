@@ -23,6 +23,8 @@ void switchLed(bool enable);
 
 void prepareSleep();
 
+bool silentStart();
+
 }  // namespace Gpio
 
 #endif  // GPIO_HXX

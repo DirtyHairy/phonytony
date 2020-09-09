@@ -7,7 +7,7 @@ namespace Audio {
 
 void initialize();
 
-void start();
+void start(bool silent);
 
 void togglePause();
 void volumeUp();

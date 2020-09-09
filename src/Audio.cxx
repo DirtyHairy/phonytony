@@ -83,6 +83,7 @@ struct Command {
 QueueHandle_t commandQueue;
 QueueHandle_t audioQueue;
 
+bool silentStart;
 std::atomic<bool> paused;
 std::atomic<bool> shutdown;
 bool clearDmaBufferOnResume = false;
@@ -248,7 +249,7 @@ bool tryToRestore() {
 bool pauseI2s() { return ((!player.isValid() || paused) && !signal.isActive()) || shutdown; }
 
 void audioTask_() {
-    paused = !tryToRestore();
+    paused = !tryToRestore() || silentStart;
 
     Chunk* chunk = new Chunk();
 
@@ -354,7 +355,9 @@ void Audio::initialize() {
     shutdown = false;
 }
 
-void Audio::start() {
+void Audio::start(bool silent) {
+    silentStart = silent;
+
     setupI2s();
 
     TaskHandle_t audioTaskHandle;
