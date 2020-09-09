@@ -52,6 +52,8 @@ bool setupMfrc522() {
 
     delay(10);
 
+    LOG_INFO(TAG, "firmware version: 0x%02x", mfrc522->PCD_ReadRegister(MFRC522::VersionReg));
+
     pinMode(PIN_RFID_IRQ, INPUT);
     attachInterrupt(PIN_RFID_IRQ, rfidIsr, FALLING);
     mfrc522->PCD_WriteRegister(MFRC522::ComIEnReg, 0xa0);
