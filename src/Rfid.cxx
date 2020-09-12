@@ -29,8 +29,6 @@ MFRC522* mfrc522;
 
 const JsonConfig* jsonConfig;
 
-extern "C" IRAM_ATTR void rfidIsr() { xTaskNotifyFromISR(rfidTaskHandle, 0, eNoAction, NULL); }
-
 bool setupMfrc522() {
     mfrc522 = new MFRC522(*spi, spiMutex);
 
@@ -55,9 +53,6 @@ bool setupMfrc522() {
     LOG_INFO(TAG, "firmware version: 0x%02x", mfrc522->PCD_ReadRegister(MFRC522::VersionReg));
 
     pinMode(PIN_RFID_IRQ, INPUT);
-    attachInterrupt(PIN_RFID_IRQ, rfidIsr, FALLING);
-    mfrc522->PCD_WriteRegister(MFRC522::ComIEnReg, 0xa0);
-    mfrc522->PCD_WriteRegister(MFRC522::DivIEnReg, 0x00);
     mfrc522->PCD_SetAntennaGain(0x70);
 
     return true;
@@ -79,7 +74,8 @@ void _rfidTask() {
 
     while (true) {
         MFRC522::Uid uid;
-        uint32_t value;
+
+        delay(RFID_POLL_DELAY);
 
         uint8_t error = mfrc522->PCD_ReadRegister(MFRC522::ErrorReg) & 0xdf;
         if (error) LOG_ERROR(TAG, "MFRC522 error %i", (int)error);
@@ -89,21 +85,7 @@ void _rfidTask() {
             LOG_ERROR(TAG, "failed to read back version: %d != %d; communication with RFID may be down",
                       (int)referenceVersion, version);
 
-        mfrc522->PCD_WriteRegister(MFRC522::CommandReg, MFRC522::PCD_Idle);
-        mfrc522->PCD_WriteRegister(MFRC522::TxModeReg, 0x00);
-        mfrc522->PCD_WriteRegister(MFRC522::RxModeReg, 0x00);
-        mfrc522->PCD_WriteRegister(MFRC522::ModWidthReg, 0x26);
-        mfrc522->PCD_WriteRegister(MFRC522::FIFOLevelReg, 0x80);
-        mfrc522->PCD_WriteRegister(MFRC522::FIFODataReg, MFRC522::PICC_CMD_REQA);
-        mfrc522->PCD_WriteRegister(MFRC522::CommandReg, MFRC522::PCD_Transceive);
-        mfrc522->PCD_WriteRegister(MFRC522::ComIrqReg, 0x7f);
-
-        xTaskNotifyWait(0x0, 0x0, &value, 0);
-        mfrc522->PCD_WriteRegister(MFRC522::BitFramingReg, 0x87);
-
-        if (xTaskNotifyWait(0x0, 0x0, &value, 100) == pdFALSE) continue;
-
-        LOG_INFO(TAG, "RFID RX interrupt: 0x%02x", mfrc522->PCD_ReadRegister(MFRC522::ComIrqReg));
+        if (!mfrc522->PICC_IsNewCardPresent()) continue;
 
         MFRC522::StatusCode readSerialStatus = mfrc522->PICC_Select(&uid);
         MFRC522::StatusCode piccHaltStatus = mfrc522->PICC_HaltA();
