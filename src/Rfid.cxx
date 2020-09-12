@@ -21,7 +21,7 @@
 
 namespace {
 
-DRAM_ATTR TaskHandle_t rfidTaskHandle;
+TaskHandle_t rfidTaskHandle;
 
 SemaphoreHandle_t spiMutex;
 SPIClass* spi;
