@@ -185,7 +185,7 @@ void Gpio::enableLed(LED led) {
     Lock lock(spiMutex);
 
     for (uint8_t pin : {PIN_LED_RED_MCP, PIN_LED_GREEN_MCP, PIN_LED_BLUE_MCP}) {
-        mcp23s17->digitalWrite(pin, (pin == (uint8_t)led) ? (COMMON_ANODE ? LOW : HIGH) : (COMMON_ANODE ? HIGH : LOW);
+        mcp23s17->digitalWrite(pin, (pin == (uint8_t)led) ? (COMMON_ANODE ? LOW : HIGH) : (COMMON_ANODE ? HIGH : LOW));
     }
 }
 
