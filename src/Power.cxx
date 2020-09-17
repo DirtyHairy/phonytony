@@ -28,6 +28,7 @@ SemaphoreHandle_t batteryStateMutex;
 
 esp_adc_cal_characteristics_t adcChar;
 Power::BatteryState batteryState;
+RTC_SLOW_ATTR Power::BatteryState persistentBatteryState;
 
 void measureBatteryState();
 
@@ -75,6 +76,59 @@ void measureBatteryState() {
 
     batteryState.state = state;
     batteryState.voltage = voltage;
+
+    switch (batteryState.level) {
+        case Power::BatteryState::Level::full:
+            if (voltage <= THRESHOLD_BATTERY_LOW_MV) batteryState.level = Power::BatteryState::Level::low;
+
+            break;
+
+        case Power::BatteryState::Level::low:
+            if (voltage <= THRESHOLD_BATTERY_CRITICAL_MV) batteryState.level = Power::BatteryState::Level::critical;
+            if (voltage > (THRESHOLD_BATTERY_LOW_MV + BATTERY_LEVEL_HYSTERESIS_MV))
+                batteryState.level = Power::BatteryState::Level::full;
+
+            break;
+
+        case Power::BatteryState::Level::critical:
+            if (voltage <= THRESHOLD_BATTERY_POWEROFF_MV) batteryState.level = Power::BatteryState::Level::poweroff;
+            if (voltage > (THRESHOLD_BATTERY_CRITICAL_MV + BATTERY_LEVEL_HYSTERESIS_MV))
+                batteryState.level = Power::BatteryState::Level::low;
+
+            break;
+
+        case Power::BatteryState::Level::poweroff:
+            if (voltage > (THRESHOLD_BATTERY_POWEROFF_MV + BATTERY_LEVEL_HYSTERESIS_MV))
+                batteryState.level = Power::BatteryState::Level::full;
+
+            break;
+    }
+
+    persistentBatteryState = batteryState;
+}
+
+void powerTask_() {
+    while (true) {
+        measureBatteryState();
+
+        {
+            Lock lock(batteryStateMutex);
+
+            if (batteryState.level == Power::BatteryState::Level::poweroff &&
+                batteryState.state == Power::BatteryState::discharging) {
+                LOG_INFO(TAG, "battery low, shutting down");
+
+                Power::deepSleep();
+            }
+        }
+
+        delay(POWER_POLL_INTERVAL);
+    }
+}
+
+void powerTask(void*) {
+    powerTask_();
+    vTaskDelete(NULL);
 }
 
 }  // namespace
@@ -83,7 +137,16 @@ void Power::initialize() {
     powerOffMutex = xSemaphoreCreateMutex();
     batteryStateMutex = xSemaphoreCreateMutex();
 
+    if (isResumeFromSleep()) batteryState = persistentBatteryState;
+
     initAdc();
+}
+
+void Power::start() {
+    TaskHandle_t powerTaskHandle;
+
+    xTaskCreatePinnedToCore(powerTask, "power", STACK_SIZE_POWER, NULL, TASK_PRIORITY_POWER, &powerTaskHandle,
+                            SERVICE_CORE);
 }
 
 void Power::deepSleep() {

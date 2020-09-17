@@ -45,6 +45,7 @@ void printStats() {
 
 void logBatteryState() {
     const char* state;
+    const char* level;
     Power::BatteryState batteryState = Power::getBatteryState();
 
     switch (batteryState.state) {
@@ -62,7 +63,26 @@ void logBatteryState() {
             break;
     }
 
-    LOG_INFO(TAG, "battery %s at %i mV", state, batteryState.voltage);
+    switch (batteryState.level) {
+        case Power::BatteryState::Level::full:
+            level = "full";
+            break;
+
+        case Power::BatteryState::Level::low:
+            level = "low";
+            break;
+
+        case Power::BatteryState::Level::critical:
+            level = "critical";
+            break;
+
+        case Power::BatteryState::Level::poweroff:
+        default:
+            level = "not sufficient";
+            break;
+    }
+
+    LOG_INFO(TAG, "battery %s and %s at %i mV", level, state, batteryState.voltage);
 }
 
 void setup() {
@@ -111,6 +131,7 @@ void setup() {
 
     Audio::start(silentStart);
     Led::start();
+    Power::start();
     Rfid::start();
     Gpio::start();
     Watchdog::start();

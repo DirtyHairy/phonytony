@@ -11,6 +11,7 @@
 
 #include "Audio.hxx"
 #include "Gpio.hxx"
+#include "Power.hxx"
 #include "config.h"
 
 #define PWM_CHANNEL 0
@@ -29,15 +30,27 @@ namespace {
 uint32_t sampleCount;
 uint8_t* samples;
 uint8_t sampleIndex;
+Gpio::LED currentLED = Gpio::LED::none;
 
 bool wasPlaying;
 
+Gpio::LED determineLed() {
+    Power::BatteryState batteryState = Power::getBatteryState();
+
+    if (batteryState.state != Power::BatteryState::State::discharging) return Gpio::LED::blue;
+
+    return batteryState.level == Power::BatteryState::Level::full ? Gpio::LED::green : Gpio::LED::red;
+}
+
 void _ledTask() {
-    Gpio::enableLed(Gpio::LED::green);
     sampleIndex = 0;
     wasPlaying = Audio::isPlaying();
 
     while (true) {
+        Gpio::LED newLed = determineLed();
+        if (newLed != currentLED) Gpio::enableLed(newLed);
+        currentLED = newLed;
+
         bool isPlaying = Audio::isPlaying();
 
         if (isPlaying != wasPlaying && !isPlaying) sampleIndex = 0;
