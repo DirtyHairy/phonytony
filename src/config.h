@@ -18,8 +18,11 @@
 
 #define PIN_AMP_ENABLE_MCP 7
 
-#define PIN_LED_MCP 6
+#define PIN_LED_RED_MCP 6
+#define PIN_LED_GREEN_MCP 5
+#define PIN_LED_BLUE_MCP 4
 #define PIN_LED GPIO_NUM_0
+#define COMMON_ANODE 1
 
 #define POWER_ON_DELAY 50
 

@@ -18,6 +18,12 @@
 #define PWM_RESOLUTION 8
 #define _PI 3.1415926535897932384626433832795f
 
+#ifdef COMMON_ANODE
+#define toDutyCycle(x) x
+#else
+#define toDutyCycle(x) (255 - x)
+#endif
+
 namespace {
 
 uint32_t sampleCount;
@@ -27,7 +33,7 @@ uint8_t sampleIndex;
 bool wasPlaying;
 
 void _ledTask() {
-    Gpio::switchLed(true);
+    Gpio::enableLed(Gpio::LED::green);
     sampleIndex = 0;
     wasPlaying = Audio::isPlaying();
 
@@ -37,7 +43,7 @@ void _ledTask() {
         if (isPlaying != wasPlaying && !isPlaying) sampleIndex = 0;
         wasPlaying = isPlaying;
 
-        ledcWrite(PWM_CHANNEL, isPlaying ? 0 : samples[sampleIndex]);
+        ledcWrite(PWM_CHANNEL, isPlaying ? toDutyCycle(255) : samples[sampleIndex]);
 
         sampleIndex = (sampleIndex + 1) % sampleCount;
         delay(50);
@@ -60,8 +66,8 @@ void Led::initialize() {
     samples = (uint8_t*)malloc(sampleCount);
 
     for (uint8_t i = 0; i < sampleCount; i++)
-        samples[i] =
-            255 - floorf(powf((cosf(2.f * _PI * i / static_cast<float>(sampleCount)) + 1.f) / 2.f, 0.75f) * 255.f);
+        samples[i] = toDutyCycle(
+            floorf(powf((cosf(2.f * _PI * i / static_cast<float>(sampleCount)) + 1.f) / 2.f, 0.75f) * 255.f));
 }
 
 void Led::start() {
@@ -69,4 +75,4 @@ void Led::start() {
     xTaskCreatePinnedToCore(ledTask, "led", STACK_SIZE_LED, NULL, TASK_PRIORITY_LED, &ledTaskHandle, SERVICE_CORE);
 }
 
-void Led::disable() { Gpio::switchLed(false); }
+void Led::disable() { Gpio::enableLed(Gpio::LED::none); }

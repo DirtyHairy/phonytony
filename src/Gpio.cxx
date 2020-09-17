@@ -141,8 +141,10 @@ void Gpio::initialize(SPIClass& _spi, void* _spiMutex) {
         mcp23s17->pinMode(PIN_AMP_ENABLE_MCP, OUTPUT);
         mcp23s17->digitalWrite(PIN_AMP_ENABLE_MCP, LOW);
 
-        mcp23s17->pinMode(PIN_LED_MCP, OUTPUT);
-        mcp23s17->digitalWrite(PIN_LED_MCP, LOW);
+        for (auto pin : {PIN_LED_RED_MCP, PIN_LED_GREEN_MCP, PIN_LED_BLUE_MCP}) {
+            mcp23s17->pinMode(pin, OUTPUT);
+            mcp23s17->digitalWrite(pin, COMMON_ANODE ? HIGH : LOW);
+        }
 
         for (uint8_t i = 8; i < 13; i++) mcp23s17->pinMode(i, INPUT);
         for (uint8_t i = 8 + DIP_SWITCH_SHIFT; i <= 9 + DIP_SWITCH_SHIFT; i++) mcp23s17->pinMode(i, INPUT_PULLUP);
@@ -179,9 +181,12 @@ uint8_t Gpio::readTP5400Status() {
     return (~mcp23s17->readPort(0) >> TP5400_STATUS_SHIFT) & 0x03;
 }
 
-void Gpio::switchLed(bool enable) {
+void Gpio::enableLed(LED led) {
     Lock lock(spiMutex);
-    mcp23s17->digitalWrite(PIN_LED_MCP, enable ? HIGH : LOW);
+
+    for (uint8_t pin : {PIN_LED_RED_MCP, PIN_LED_GREEN_MCP, PIN_LED_BLUE_MCP}) {
+        mcp23s17->digitalWrite(pin, (pin == (uint8_t)led) ? (COMMON_ANODE ? LOW : HIGH) : (COMMON_ANODE ? HIGH : LOW);
+    }
 }
 
 bool Gpio::silentStart() {
