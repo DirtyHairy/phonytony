@@ -31,36 +31,22 @@ const JsonConfig* jsonConfig;
 
 extern "C" IRAM_ATTR void rfidIsr() { xTaskNotifyFromISR(rfidTaskHandle, 0, eNoAction, NULL); }
 
-bool setupMfrc522() {
+void setupMfrc522() {
     mfrc522 = new MFRC522(*spi, spiMutex);
+    pinMode(PIN_RFID_IRQ, INPUT);
+    attachInterrupt(PIN_RFID_IRQ, rfidIsr, FALLING);
+}
 
+void initMfrc522() {
     mfrc522->PCD_Init(PIN_RFID_CS, MFRC522::UNUSED_PIN);
 
     delay(10);
 
-    bool selfTestSucceeded;
-    selfTestSucceeded = mfrc522->PCD_PerformSelfTest();
+    LOG_INFO(TAG, "MFRC522 initialized; firmware version: 0x%02x", mfrc522->PCD_ReadRegister(MFRC522::VersionReg));
 
-    if (!selfTestSucceeded) {
-        LOG_ERROR(TAG, "RC522 self test failed");
-        return false;
-    }
-
-    LOG_INFO(TAG, "RC522 self test succeeded");
-
-    mfrc522->PCD_Init();
-
-    delay(10);
-
-    LOG_INFO(TAG, "firmware version: 0x%02x", mfrc522->PCD_ReadRegister(MFRC522::VersionReg));
-
-    pinMode(PIN_RFID_IRQ, INPUT);
-    attachInterrupt(PIN_RFID_IRQ, rfidIsr, FALLING);
     mfrc522->PCD_WriteRegister(MFRC522::ComIEnReg, 0xa0);
     mfrc522->PCD_WriteRegister(MFRC522::DivIEnReg, 0x00);
     mfrc522->PCD_SetAntennaGain(0x70);
-
-    return true;
 }
 
 void handleRfid(std::string uid) {
@@ -73,9 +59,8 @@ void handleRfid(std::string uid) {
 }
 
 void _rfidTask() {
-    if (!setupMfrc522()) return;
-
-    uint8_t referenceVersion = mfrc522->PCD_ReadRegister(MFRC522::VersionReg);
+    setupMfrc522();
+    initMfrc522();
 
     while (true) {
         MFRC522::Uid uid;
@@ -84,10 +69,12 @@ void _rfidTask() {
         uint8_t error = mfrc522->PCD_ReadRegister(MFRC522::ErrorReg) & 0xdf;
         if (error) LOG_ERROR(TAG, "MFRC522 error %i", (int)error);
 
-        uint8_t version = mfrc522->PCD_ReadRegister(MFRC522::VersionReg);
-        if (referenceVersion != version)
-            LOG_ERROR(TAG, "failed to read back version: %d != %d; communication with RFID may be down",
-                      (int)referenceVersion, version);
+        uint8_t comienreg = mfrc522->PCD_ReadRegister(MFRC522::ComIEnReg);
+        if (comienreg != 0xa0) {
+            LOG_WARN(TAG, "Seems MFRC522 has reset, reinitializing. ComIEnReg = 0x%02x", comienreg);
+
+            initMfrc522();
+        }
 
         mfrc522->PCD_WriteRegister(MFRC522::CommandReg, MFRC522::PCD_Idle);
         mfrc522->PCD_WriteRegister(MFRC522::TxModeReg, 0x00);
