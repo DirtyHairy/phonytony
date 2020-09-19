@@ -22,6 +22,7 @@ void stop();
 bool isPlaying();
 
 void signalError();
+void signalCommandReceived();
 
 }  // namespace Audio
 

@@ -73,7 +73,8 @@ void dispatch(const Command& cmd) {
             break;
 
         case Command::Type::dbgSetVoltage:
-            // Power::dbgSetVoltage(cmd.payload.voltage);
+            Audio::signalCommandReceived();
+            Power::dbgSetVoltage(cmd.payload.voltage);
             break;
 
         default:

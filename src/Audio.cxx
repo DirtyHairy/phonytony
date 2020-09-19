@@ -68,7 +68,8 @@ struct Command {
         cmdNext,
         cmdRewind,
         cmdPlay,
-        cmdSignalError
+        cmdSignalError,
+        cmdSignalCommandReceived
     };
 
     Type type;
@@ -224,6 +225,12 @@ void receiveAndHandleCommand(bool block) {
             case Command::cmdSignalError:
                 resetAudio();
                 signal.start(Signal::error);
+
+                break;
+
+            case Command::cmdSignalCommandReceived:
+                resetAudio();
+                signal.start(Signal::commandReceived);
 
                 break;
 
@@ -398,3 +405,5 @@ void Audio::stop() {
 bool Audio::isPlaying() { return player.isValid() && !paused; }
 
 void Audio::signalError() { dispatchCommand(Command::cmdSignalError); }
+
+void Audio::signalCommandReceived() { dispatchCommand(Command::cmdSignalCommandReceived); }

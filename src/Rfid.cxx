@@ -72,7 +72,7 @@ void _rfidTask() {
 
         uint8_t comienreg = mfrc522->PCD_ReadRegister(MFRC522::ComIEnReg);
         if (comienreg != 0xa0) {
-            LOG_WARN(TAG, "Seems MFRC522 has reset, reinitializing. ComIEnReg = 0x%02x", comienreg);
+            LOG_ERROR(TAG, "Seems MFRC522 has reset, reinitializing. ComIEnReg = 0x%02x", comienreg);
 
             initMfrc522();
         }
@@ -110,7 +110,7 @@ void _rfidTask() {
         }
 
         if (piccHaltStatus != MFRC522::STATUS_OK)
-            LOG_ERROR(TAG, "RFID: failed to send HALT to PICC: %i", (int)readSerialStatus);
+            LOG_WARN(TAG, "RFID: failed to send HALT to PICC: %i", (int)readSerialStatus);
     }
 }
 

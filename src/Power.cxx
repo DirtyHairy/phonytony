@@ -10,6 +10,7 @@
 #include <esp_sleep.h>
 #include <freertos/semphr.h>
 
+#include <atomic>
 #include <cstdint>
 
 #include "Audio.hxx"
@@ -17,8 +18,8 @@
 #include "Led.hxx"
 #include "Lock.hxx"
 #include "Log.hxx"
-#include "config.h"
 #include "Rfid.hxx"
+#include "config.h"
 
 #define TAG "power"
 
@@ -30,6 +31,7 @@ SemaphoreHandle_t batteryStateMutex;
 esp_adc_cal_characteristics_t adcChar;
 Power::BatteryState batteryState;
 RTC_SLOW_ATTR Power::BatteryState persistentBatteryState;
+std::atomic<uint32_t> dbgFixedVoltage;
 
 void measureBatteryState();
 
@@ -44,6 +46,8 @@ void initAdc() {
 }
 
 uint32_t measureVoltage() {
+    if (dbgFixedVoltage != 0xffff) return dbgFixedVoltage;
+
     uint32_t acc = 0;
 
     for (uint8_t i = 0; i < 64; i++) {
@@ -137,6 +141,7 @@ void powerTask(void*) {
 void Power::initialize() {
     powerOffMutex = xSemaphoreCreateMutex();
     batteryStateMutex = xSemaphoreCreateMutex();
+    dbgFixedVoltage = 0xffff;
 
     if (isResumeFromSleep()) batteryState = persistentBatteryState;
 
@@ -177,3 +182,5 @@ Power::BatteryState Power::getBatteryState() {
 
     return _batteryState;
 }
+
+void Power::dbgSetVoltage(uint32_t voltage) { dbgFixedVoltage = voltage; }
