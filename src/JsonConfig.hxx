@@ -4,18 +4,21 @@
 #include <string>
 #include <unordered_map>
 
-class JsonConfig {
+#include "Command.hxx"
+#include "Config.hxx"
+
+class JsonConfig : public Config {
    public:
     JsonConfig() = default;
 
     bool load();
 
-    std::string albumForRfid(const std::string& rfid) const;
+    const Command::Command& commandForRfid(const std::string& uid) override;
 
-    bool isRfidConfigured(const std::string& uid) const;
+    bool isRfidMapped(const std::string& uid) override;
 
    private:
-    std::unordered_map<std::string, std::string> rfidMap;
+    std::unordered_map<std::string, Command::Command> rfidMap;
 };
 
 #endif  // JSON_CONFIG_HXX

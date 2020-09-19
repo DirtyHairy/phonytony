@@ -11,6 +11,8 @@
 
 namespace {
 
+Command::Command emptyCommand(Command::Command::none());
+
 class SPIRamAllocator {
    public:
     void* allocate(size_t n) { return ps_malloc(n); }
@@ -51,14 +53,14 @@ bool JsonConfig::load() {
         rfidMap.reserve(rfidMapping.as<JsonObject>().size());
 
         for (auto mapping : rfidMapping.as<JsonObject>())
-            rfidMap[mapping.key().c_str()] = mapping.value().as<std::string>();
+            rfidMap.emplace(mapping.key().c_str(), Command::Command::play(mapping.value().as<const char*>()));
     }
 
     return true;
 }
 
-bool JsonConfig::isRfidConfigured(const std::string& uid) const { return rfidMap.find(uid) != rfidMap.end(); }
+bool JsonConfig::isRfidMapped(const std::string& uid) { return rfidMap.find(uid) != rfidMap.end(); }
 
-std::string JsonConfig::albumForRfid(const std::string& uid) const {
-    return isRfidConfigured(uid) ? rfidMap.at(uid) : "";
+const Command::Command& JsonConfig::commandForRfid(const std::string& uid) {
+    return isRfidMapped(uid) ? rfidMap.at(uid) : emptyCommand;
 }

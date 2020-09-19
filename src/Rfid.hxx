@@ -1,12 +1,12 @@
 #ifndef RFID_HXX
 #define RFID_HXX
 
-class JsonConfig;
+class Config;
 class SPIClass;
 
 namespace Rfid {
 
-void initialize(SPIClass& spi, void* spiMutex, const JsonConfig& config);
+void initialize(SPIClass& spi, void* spiMutex, Config& config);
 
 void start();
 

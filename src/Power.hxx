@@ -24,6 +24,8 @@ void deepSleep();
 
 bool isResumeFromSleep();
 
+void dbgSetVoltage(uint32_t voltage);
+
 BatteryState getBatteryState();
 
 }  // namespace Power

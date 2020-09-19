@@ -12,9 +12,10 @@
 #include <sstream>
 
 #include "Audio.hxx"
-#include "JsonConfig.hxx"
-#include "MFRC522/MFRC522.h"
+#include "Command.hxx"
+#include "Config.hxx"
 #include "Log.hxx"
+#include "MFRC522/MFRC522.h"
 #include "config.h"
 
 #define TAG "rfid"
@@ -27,7 +28,7 @@ SemaphoreHandle_t spiMutex;
 SPIClass* spi;
 MFRC522* mfrc522;
 
-const JsonConfig* jsonConfig;
+Config* config;
 
 extern "C" IRAM_ATTR void rfidIsr() { xTaskNotifyFromISR(rfidTaskHandle, 0, eNoAction, NULL); }
 
@@ -50,8 +51,8 @@ void initMfrc522() {
 }
 
 void handleRfid(std::string uid) {
-    if (jsonConfig->isRfidConfigured(uid)) {
-        Audio::play(jsonConfig->albumForRfid(uid).c_str());
+    if (config->isRfidMapped(uid)) {
+        Command::dispatch(config->commandForRfid(uid));
     } else {
         Audio::signalError();
         LOG_INFO(TAG, "scanned unmapped RFID %s", uid.c_str());
@@ -120,10 +121,10 @@ void rfidTask(void*) {
 
 }  // namespace
 
-void Rfid::initialize(SPIClass& _spi, void* _spiMutex, const JsonConfig& config) {
+void Rfid::initialize(SPIClass& _spi, void* _spiMutex, Config& _config) {
     spi = &_spi;
     spiMutex = _spiMutex;
-    jsonConfig = &config;
+    config = &_config;
 }
 
 void Rfid::start() {
