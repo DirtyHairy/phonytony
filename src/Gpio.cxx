@@ -26,19 +26,25 @@ DRAM_ATTR TaskHandle_t gpioTaskHandle;
 SPIClass* spi;
 SemaphoreHandle_t spiMutex;
 MCP23S17* mcp23s17;
+bool shutdown = false;
 
 Button buttons[] = {
     Button(
         BTN_PAUSE_MASK,
         []() {
+            if (shutdown) return;
+
             LOG_INFO(TAG, "toggle pause");
             Audio::togglePause();
         },
         BTN_POWEROFF_DELAY,
         []() {
+            if (shutdown) return;
+
             LOG_INFO(TAG, "pre-sleep");
 
-            Audio::shutdown();
+            shutdown = true;
+            Audio::stop();
             Led::stop();
             Rfid::stop();
         },
@@ -49,27 +55,37 @@ Button buttons[] = {
         }),
     Button(BTN_VOLUME_DOWN_MASK, BTN_VOLUME_REPEAT,
            []() {
+               if (shutdown) return;
+
                LOG_INFO(TAG, "volume down");
                Audio::volumeDown();
            }),
     Button(BTN_VOLUME_UP_MASK, BTN_VOLUME_REPEAT,
            []() {
+               if (shutdown) return;
+
                LOG_INFO(TAG, "volume up");
                Audio::volumeUp();
            }),
     Button(
         BTN_PREVIOUS_MASK,
         []() {
+            if (shutdown) return;
+
             LOG_INFO(TAG, "previous");
             Audio::previous();
         },
         BTN_REWIND_DELAY,
         []() {
+            if (shutdown) return;
+
             Audio::rewind();
             LOG_INFO(TAG, "rewind");
         }),
     Button(BTN_NEXT_MASK, BTN_NEXT_REPEAT,
            []() {
+               if (shutdown) return;
+
                LOG_INFO(TAG, "next");
                Audio::next();
            }),

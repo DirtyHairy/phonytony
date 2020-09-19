@@ -329,7 +329,11 @@ void setupI2s() {
     i2s_stop(I2S_NUM);
 }
 
-void dispatchCommand(const Command& command) { xQueueSend(commandQueue, (void*)&command, portMAX_DELAY); }
+void dispatchCommand(const Command& command) {
+    if (shutdown) return;
+
+    xQueueSend(commandQueue, (void*)&command, portMAX_DELAY);
+}
 
 void dispatchCommand(Command::Type type) { dispatchCommand(Command(type)); }
 
@@ -352,7 +356,7 @@ void Audio::initialize() {
         state.clearAlbum();
     }
 
-    ::shutdown = false;
+    shutdown = false;
 }
 
 void Audio::start(bool silent) {
@@ -384,8 +388,8 @@ void Audio::play(const char* album) {
     dispatchCommand(command);
 }
 
-void Audio::shutdown() {
-    ::shutdown = true;
+void Audio::stop() {
+    shutdown = true;
 
     Lock lock(stateMutex);
     persistentState = state;

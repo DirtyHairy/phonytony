@@ -47,7 +47,7 @@ void initMfrc522() {
 
     mfrc522->PCD_WriteRegister(MFRC522::ComIEnReg, 0xa0);
     mfrc522->PCD_WriteRegister(MFRC522::DivIEnReg, 0x00);
-    mfrc522->PCD_SetAntennaGain(0x70);
+    mfrc522->PCD_SetAntennaGain(0x50);
 }
 
 void handleRfid(std::string uid) {
