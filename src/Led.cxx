@@ -27,6 +27,7 @@
 
 namespace {
 
+TaskHandle_t ledTaskHandle;
 uint32_t sampleCount;
 uint8_t* samples;
 uint8_t sampleIndex;
@@ -84,8 +85,12 @@ void Led::initialize() {
 }
 
 void Led::start() {
-    TaskHandle_t ledTaskHandle;
     xTaskCreatePinnedToCore(ledTask, "led", STACK_SIZE_LED, NULL, TASK_PRIORITY_LED, &ledTaskHandle, SERVICE_CORE);
 }
 
-void Led::disable() { Gpio::enableLed(Gpio::LED::none); }
+void Led::stop() {
+    if (ledTaskHandle) vTaskDelete(ledTaskHandle);
+    ledTaskHandle = NULL;
+
+    Gpio::enableLed(Gpio::LED::none);
+}

@@ -130,3 +130,8 @@ void Rfid::initialize(SPIClass& _spi, void* _spiMutex, Config& _config) {
 void Rfid::start() {
     xTaskCreatePinnedToCore(rfidTask, "rfid", STACK_SIZE_RFID, NULL, TASK_PRIORITY_RFID, &rfidTaskHandle, SERVICE_CORE);
 }
+
+void Rfid::stop() {
+    if (rfidTaskHandle) vTaskDelete(rfidTaskHandle);
+    rfidTaskHandle = NULL;
+}

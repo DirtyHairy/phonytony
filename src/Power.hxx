@@ -18,8 +18,6 @@ void initialize();
 
 void start();
 
-void prepareSleep();
-
 void deepSleep();
 
 bool isResumeFromSleep();

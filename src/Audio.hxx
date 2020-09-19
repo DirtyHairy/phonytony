@@ -17,7 +17,7 @@ void next();
 void rewind();
 void play(const char* album);
 
-void prepareSleep();
+void shutdown();
 
 bool isPlaying();
 

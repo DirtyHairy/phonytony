@@ -18,6 +18,7 @@
 #include "Lock.hxx"
 #include "Log.hxx"
 #include "config.h"
+#include "Rfid.hxx"
 
 #define TAG "power"
 
@@ -150,7 +151,11 @@ void Power::start() {
 }
 
 void Power::deepSleep() {
-    prepareSleep();
+    Audio::shutdown();
+    Gpio::disableAmp();
+    Led::stop();
+    Rfid::stop();
+    Gpio::prepareSleep();
 
     Lock lock(powerOffMutex);
 
@@ -161,13 +166,6 @@ void Power::deepSleep() {
 
     esp_sleep_enable_ext1_wakeup(static_cast<uint64_t>(1) << (PIN_WAKEUP - GPIO_NUM_32 + 32), ESP_EXT1_WAKEUP_ANY_HIGH);
     esp_deep_sleep_start();
-}
-
-void Power::prepareSleep() {
-    Audio::prepareSleep();
-    Gpio::disableAmp();
-    Led::disable();
-    Gpio::prepareSleep();
 }
 
 bool Power::isResumeFromSleep() { return esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_UNDEFINED; }

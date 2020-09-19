@@ -7,7 +7,7 @@ void initialize();
 
 void start();
 
-void disable();
+void stop();
 
 }  // namespace Led
 

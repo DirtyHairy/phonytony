@@ -10,9 +10,11 @@
 
 #include "Audio.hxx"
 #include "Button.hxx"
+#include "Led.hxx"
 #include "Lock.hxx"
 #include "Log.hxx"
 #include "Power.hxx"
+#include "Rfid.hxx"
 #include "config.h"
 
 #define TAG "gpio"
@@ -34,8 +36,11 @@ Button buttons[] = {
         },
         BTN_POWEROFF_DELAY,
         []() {
-            LOG_INFO(TAG, "prepare sleep");
-            Power::prepareSleep();
+            LOG_INFO(TAG, "pre-sleep");
+
+            Audio::shutdown();
+            Led::stop();
+            Rfid::stop();
         },
         []() {
             delay(DELAY_BEFORE_SLEEP);

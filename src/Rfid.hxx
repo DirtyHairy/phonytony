@@ -10,6 +10,8 @@ void initialize(SPIClass& spi, void* spiMutex, Config& config);
 
 void start();
 
+void stop();
+
 }  // namespace Rfid
 
 #endif  // RFID_HXX

@@ -352,7 +352,7 @@ void Audio::initialize() {
         state.clearAlbum();
     }
 
-    shutdown = false;
+    ::shutdown = false;
 }
 
 void Audio::start(bool silent) {
@@ -384,8 +384,8 @@ void Audio::play(const char* album) {
     dispatchCommand(command);
 }
 
-void Audio::prepareSleep() {
-    shutdown = true;
+void Audio::shutdown() {
+    ::shutdown = true;
 
     Lock lock(stateMutex);
     persistentState = state;
