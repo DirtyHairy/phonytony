@@ -29,6 +29,8 @@ void prepareSleep();
 
 bool silentStart();
 
+void mfrc522PowerDown(uint8_t state);
+
 }  // namespace Gpio
 
 #endif  // GPIO_HXX

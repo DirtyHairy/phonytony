@@ -78,6 +78,7 @@
 #include <Arduino.h>
 #include <SPI.h>
 #include <stdint.h>
+#include <functional>
 
 #ifndef MFRC522_SPICLOCK
 #define MFRC522_SPICLOCK 10000000  // MFRC522 accept upto 10MHz
@@ -118,6 +119,8 @@ const byte FM17522_firmware_reference[] PROGMEM = {
 
 class MFRC522 {
    public:
+    using powerDownHandlerT = std::function<void(uint8_t)>;
+
     // Size of the MFRC522 FIFO
     static constexpr byte FIFO_SIZE = 64;  // The FIFO is 64 bytes.
     // Default value for unused pin
@@ -321,8 +324,6 @@ class MFRC522 {
     // Functions for setting up the Arduino
     /////////////////////////////////////////////////////////////////////////////////////
     MFRC522(SPIClass &spi, SemaphoreHandle_t spiMutex);
-    MFRC522(byte resetPowerDownPin, SPIClass &spi, SemaphoreHandle_t spiMutex);
-    MFRC522(byte chipSelectPin, byte resetPowerDownPin, SPIClass &spi, SemaphoreHandle_t spiMutex);
 
     /////////////////////////////////////////////////////////////////////////////////////
     // Basic interface functions for communicating with the MFRC522
@@ -339,8 +340,7 @@ class MFRC522 {
     // Functions for manipulating the MFRC522
     /////////////////////////////////////////////////////////////////////////////////////
     void PCD_Init();
-    void PCD_Init(byte resetPowerDownPin);
-    void PCD_Init(byte chipSelectPin, byte resetPowerDownPin);
+    void PCD_Init(byte chipSelectPin, powerDownHandlerT powerDownHandler = powerDownHandlerT());
     void PCD_Reset();
     void PCD_AntennaOn();
     void PCD_AntennaOff();
@@ -417,9 +417,9 @@ class MFRC522 {
     virtual bool PICC_ReadCardSerial();
 
    protected:
-    byte _chipSelectPin;      // Arduino pin connected to MFRC522's SPI slave select input (Pin 24, NSS, active low)
-    byte _resetPowerDownPin;  // Arduino pin connected to MFRC522's reset and power down input (Pin 6, NRSTPD, active
-                              // low)
+    byte _chipSelectPin{UINT8_MAX};
+    powerDownHandlerT powerDownHandler;
+
     StatusCode MIFARE_TwoStepHelper(byte command, byte blockAddr, int32_t data);
     SPIClass &_spi;
     SemaphoreHandle_t spiMutex;

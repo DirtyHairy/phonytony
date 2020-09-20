@@ -90,6 +90,12 @@ void setup() {
 
     Log::initialize();
 
+    pinMode(PIN_MCP23S17_CS, OUTPUT);
+    digitalWrite(PIN_MCP23S17_CS, HIGH);
+
+    pinMode(PIN_RFID_CS, OUTPUT);
+    digitalWrite(PIN_RFID_CS, HIGH);
+
     hspiMutex = xSemaphoreCreateMutex();
     spiVSPI.begin();
     spiHSPI.begin();

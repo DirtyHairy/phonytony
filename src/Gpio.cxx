@@ -162,6 +162,9 @@ void Gpio::initialize(SPIClass& _spi, void* _spiMutex) {
         mcp23s17->pinMode(PIN_AMP_ENABLE_MCP, OUTPUT);
         mcp23s17->digitalWrite(PIN_AMP_ENABLE_MCP, LOW);
 
+        mcp23s17->pinMode(PIN_MFRC522_RESET_MCP, OUTPUT);
+        mcp23s17->digitalWrite(PIN_MFRC522_RESET_MCP, LOW);
+
         for (auto pin : {PIN_LED_RED_MCP, PIN_LED_GREEN_MCP, PIN_LED_BLUE_MCP}) {
             mcp23s17->pinMode(pin, OUTPUT);
             mcp23s17->digitalWrite(pin, COMMON_ANODE ? HIGH : LOW);
@@ -176,6 +179,7 @@ void Gpio::initialize(SPIClass& _spi, void* _spiMutex) {
 void Gpio::prepareSleep() {
     for (uint8_t i = 8 + DIP_SWITCH_SHIFT; i <= 9 + DIP_SWITCH_SHIFT; i++) mcp23s17->pinMode(i, INPUT);
     for (uint8_t i = TP5400_STATUS_SHIFT; i <= 1 + TP5400_STATUS_SHIFT; i++) mcp23s17->pinMode(i, INPUT);
+    mcp23s17->pinMode(PIN_MFRC522_RESET_MCP, INPUT);
 }
 
 void Gpio::start() {
@@ -213,4 +217,9 @@ void Gpio::enableLed(LED led) {
 bool Gpio::silentStart() {
     Lock lock(spiMutex);
     return mcp23s17->readPort(1) & (BTN_VOLUME_UP_MASK | BTN_VOLUME_DOWN_MASK | BTN_NEXT_MASK | BTN_PREVIOUS_MASK);
+}
+
+void Gpio::mfrc522PowerDown(uint8_t state) {
+    Lock lock(spiMutex);
+    mcp23s17->digitalWrite(PIN_MFRC522_RESET_MCP, state);
 }

@@ -16,6 +16,7 @@
 #include "Config.hxx"
 #include "Log.hxx"
 #include "MFRC522/MFRC522.h"
+#include "Gpio.hxx"
 #include "config.h"
 
 #define TAG "rfid"
@@ -39,7 +40,7 @@ void setupMfrc522() {
 }
 
 void initMfrc522() {
-    mfrc522->PCD_Init(PIN_RFID_CS, MFRC522::UNUSED_PIN);
+    mfrc522->PCD_Init(PIN_RFID_CS, Gpio::mfrc522PowerDown);
 
     delay(10);
 
