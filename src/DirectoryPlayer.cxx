@@ -25,6 +25,8 @@ void DirectoryPlayer::rewind() {
 }
 
 void DirectoryPlayer::previousTrack() {
+    if (directoryReader.getLength() == 0) return;
+
     if (trackIndex == 0) {
         rewindTrack();
         return;
@@ -34,6 +36,8 @@ void DirectoryPlayer::previousTrack() {
 }
 
 void DirectoryPlayer::nextTrack() {
+    if (directoryReader.getLength() == 0) return;
+
     trackIndex = (trackIndex + 1) % directoryReader.getLength();
 
     openTrack(trackIndex);

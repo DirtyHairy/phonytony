@@ -124,23 +124,24 @@ void setup() {
         return;
     }
 
-    Log::enableSD();
-
-    if (!config.load()) {
-        LOG_WARN(TAG, "WARNING: failed to load configuration");
-    }
-
     Audio::initialize();
     Rfid::initialize(spiHSPI, hspiMutex, config);
     Watchdog::initialize();
     Led::initialize();
 
     Audio::start(silentStart);
+    Gpio::start();
     Led::start();
     Power::start();
-    Rfid::start();
-    Gpio::start();
     Watchdog::start();
+
+    if (!config.load()) {
+        LOG_WARN(TAG, "WARNING: failed to load configuration");
+    }
+
+    Rfid::start();
+
+    Log::enableSD();
 
     LOG_INFO(TAG, "DIP config %i", (int)Gpio::readConfigSwitches());
     delay(500);

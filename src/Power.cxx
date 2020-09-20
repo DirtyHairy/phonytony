@@ -114,6 +114,10 @@ void measureBatteryState() {
 
 void powerTask_() {
     while (true) {
+        // It seems the TP5400 reports an incorrect status immediatelly after all peripherials
+        // have powered up -> initial wait in order to give the circuit time to stabilize
+        delay(POWER_POLL_INTERVAL);
+
         measureBatteryState();
 
         {
@@ -126,8 +130,6 @@ void powerTask_() {
                 Power::deepSleep();
             }
         }
-
-        delay(POWER_POLL_INTERVAL);
     }
 }
 
