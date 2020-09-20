@@ -159,7 +159,6 @@ void Power::start() {
 
 void Power::deepSleep() {
     Audio::stop();
-    Gpio::disableAmp();
     Led::stop();
     Rfid::stop();
     Gpio::prepareSleep();
