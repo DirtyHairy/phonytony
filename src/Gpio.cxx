@@ -7,6 +7,7 @@
 #include <MCP23S17.h>
 #include <SPI.h>
 #include <freertos/semphr.h>
+#include <atomic>
 
 #include "Audio.hxx"
 #include "Button.hxx"
@@ -27,6 +28,7 @@ SPIClass* spi;
 SemaphoreHandle_t spiMutex;
 MCP23S17* mcp23s17;
 bool shutdown = false;
+std::atomic<bool> poweroff;
 
 Button buttons[] = {
     Button(
@@ -146,6 +148,7 @@ void gpioTask(void*) {
 void Gpio::initialize(SPIClass& _spi, void* _spiMutex) {
     spi = &_spi;
     spiMutex = _spiMutex;
+    poweroff = false;
 
     mcp23s17 = new MCP23S17(spi, PIN_MCP23S17_CS, 0);
 
@@ -177,6 +180,8 @@ void Gpio::initialize(SPIClass& _spi, void* _spiMutex) {
 }
 
 void Gpio::prepareSleep() {
+    poweroff = true;
+
     for (uint8_t i = 8 + DIP_SWITCH_SHIFT; i <= 9 + DIP_SWITCH_SHIFT; i++) mcp23s17->pinMode(i, INPUT);
     for (uint8_t i = TP5400_STATUS_SHIFT; i <= 1 + TP5400_STATUS_SHIFT; i++) mcp23s17->pinMode(i, INPUT);
     mcp23s17->pinMode(PIN_MFRC522_RESET_MCP, INPUT);
@@ -187,6 +192,8 @@ void Gpio::start() {
 }
 
 void Gpio::enableAmp() {
+    if (poweroff) return;
+
     Lock lock(spiMutex);
     mcp23s17->digitalWrite(PIN_AMP_ENABLE_MCP, HIGH);
 }
@@ -207,6 +214,8 @@ uint8_t Gpio::readTP5400Status() {
 }
 
 void Gpio::enableLed(LED led) {
+    if (poweroff) return;
+
     Lock lock(spiMutex);
 
     for (uint8_t pin : {PIN_LED_RED_MCP, PIN_LED_GREEN_MCP, PIN_LED_BLUE_MCP}) {
@@ -220,6 +229,8 @@ bool Gpio::silentStart() {
 }
 
 void Gpio::mfrc522PowerDown(uint8_t state) {
+    if (poweroff) return;
+
     Lock lock(spiMutex);
     mcp23s17->digitalWrite(PIN_MFRC522_RESET_MCP, state);
 }
