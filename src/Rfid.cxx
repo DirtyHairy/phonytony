@@ -48,7 +48,7 @@ void initMfrc522() {
 
     mfrc522->PCD_WriteRegister(MFRC522::ComIEnReg, 0xa0);
     mfrc522->PCD_WriteRegister(MFRC522::DivIEnReg, 0x00);
-    mfrc522->PCD_SetAntennaGain(0x50);
+    mfrc522->PCD_SetAntennaGain(0x70);
 }
 
 void handleRfid(std::string uid) {
@@ -74,6 +74,9 @@ void _rfidTask() {
         uint8_t comienreg = mfrc522->PCD_ReadRegister(MFRC522::ComIEnReg);
         if (comienreg != 0xa0) {
             LOG_ERROR(TAG, "Seems MFRC522 has reset, reinitializing. ComIEnReg = 0x%02x", comienreg);
+
+            Gpio::mfrc522PowerDown(0);
+            delay(50);
 
             initMfrc522();
         }
