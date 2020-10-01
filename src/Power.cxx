@@ -82,32 +82,37 @@ void measureBatteryState() {
     batteryState.state = state;
     batteryState.voltage = voltage;
 
-    switch (batteryState.level) {
-        case Power::BatteryState::Level::full:
-            if (voltage <= THRESHOLD_BATTERY_LOW_MV) batteryState.level = Power::BatteryState::Level::low;
+    Power::BatteryState::Level oldLevel;
 
-            break;
+    do {
+        oldLevel = batteryState.level;
+        switch (batteryState.level) {
+            case Power::BatteryState::Level::full:
+                if (voltage <= THRESHOLD_BATTERY_LOW_MV) batteryState.level = Power::BatteryState::Level::low;
 
-        case Power::BatteryState::Level::low:
-            if (voltage <= THRESHOLD_BATTERY_CRITICAL_MV) batteryState.level = Power::BatteryState::Level::critical;
-            if (voltage > (THRESHOLD_BATTERY_LOW_MV + BATTERY_LEVEL_HYSTERESIS_MV))
-                batteryState.level = Power::BatteryState::Level::full;
+                break;
 
-            break;
+            case Power::BatteryState::Level::low:
+                if (voltage <= THRESHOLD_BATTERY_CRITICAL_MV) batteryState.level = Power::BatteryState::Level::critical;
+                if (voltage > (THRESHOLD_BATTERY_LOW_MV + BATTERY_LEVEL_HYSTERESIS_MV))
+                    batteryState.level = Power::BatteryState::Level::full;
 
-        case Power::BatteryState::Level::critical:
-            if (voltage <= THRESHOLD_BATTERY_POWEROFF_MV) batteryState.level = Power::BatteryState::Level::poweroff;
-            if (voltage > (THRESHOLD_BATTERY_CRITICAL_MV + BATTERY_LEVEL_HYSTERESIS_MV))
-                batteryState.level = Power::BatteryState::Level::low;
+                break;
 
-            break;
+            case Power::BatteryState::Level::critical:
+                if (voltage <= THRESHOLD_BATTERY_POWEROFF_MV) batteryState.level = Power::BatteryState::Level::poweroff;
+                if (voltage > (THRESHOLD_BATTERY_CRITICAL_MV + BATTERY_LEVEL_HYSTERESIS_MV))
+                    batteryState.level = Power::BatteryState::Level::low;
 
-        case Power::BatteryState::Level::poweroff:
-            if (voltage > (THRESHOLD_BATTERY_POWEROFF_MV + BATTERY_LEVEL_HYSTERESIS_MV))
-                batteryState.level = Power::BatteryState::Level::full;
+                break;
 
-            break;
-    }
+            case Power::BatteryState::Level::poweroff:
+                if (voltage > (THRESHOLD_BATTERY_POWEROFF_MV + BATTERY_LEVEL_HYSTERESIS_MV))
+                    batteryState.level = Power::BatteryState::Level::full;
+
+                break;
+        }
+    } while (batteryState.level != oldLevel);
 
     persistentBatteryState = batteryState;
 }
