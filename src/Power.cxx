@@ -86,6 +86,7 @@ void measureBatteryState() {
 
     do {
         oldLevel = batteryState.level;
+
         switch (batteryState.level) {
             case Power::BatteryState::Level::full:
                 if (voltage <= THRESHOLD_BATTERY_LOW_MV) batteryState.level = Power::BatteryState::Level::low;
