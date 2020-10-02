@@ -18,6 +18,7 @@
 #include "Led.hxx"
 #include "Lock.hxx"
 #include "Log.hxx"
+#include "Net.hxx"
 #include "Rfid.hxx"
 #include "config.h"
 
@@ -168,6 +169,7 @@ void Power::deepSleep() {
     Led::stop();
     Rfid::stop();
     Gpio::prepareSleep();
+    Net::prepareSleep();
 
     Lock lock(powerOffMutex);
 

@@ -4,6 +4,7 @@
 
 #include "Audio.hxx"
 #include "Config.hxx"
+#include "Net.hxx"
 #include "Power.hxx"
 
 namespace Command {
@@ -64,6 +65,22 @@ Command Command::dbgSetVoltage(uint32_t voltage) {
     return cmd;
 }
 
+Command Command::startNet() {
+    Command cmd;
+
+    cmd.type = Type::startNet;
+
+    return cmd;
+}
+
+Command Command::stopNet() {
+    Command cmd;
+
+    cmd.type = Type::stopNet;
+
+    return cmd;
+}
+
 Command Command::none() { return Command(); }
 
 void dispatch(const Command& cmd) {
@@ -75,6 +92,16 @@ void dispatch(const Command& cmd) {
         case Command::Type::dbgSetVoltage:
             Audio::signalCommandReceived();
             Power::dbgSetVoltage(cmd.payload.voltage);
+            break;
+
+        case Command::Type::startNet:
+            Audio::signalCommandReceived();
+            Net::start();
+            break;
+
+        case Command::Type::stopNet:
+            Audio::signalCommandReceived();
+            Net::stop();
             break;
 
         default:

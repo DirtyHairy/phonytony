@@ -63,6 +63,7 @@ void Log::initialize() {
     Serial.begin(115200);
 
     esp_log_level_set("*", static_cast<esp_log_level_t>(LOG_LEVEL));
+    esp_log_level_set("wifi", ESP_LOG_ERROR);
     esp_log_set_vprintf(doLogPre);
 }
 

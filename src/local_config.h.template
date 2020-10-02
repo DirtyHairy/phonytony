@@ -1,0 +1,8 @@
+#ifndef LOCAL_CONFIG_H
+#define LOCAL_CONFIG_H
+
+#define SSID "your-ssid-here"
+#define PSK "your-psk-here"
+#define HOSTNAME "your-hostname-here"
+
+#endif // LOCAL_CONFIG_H

@@ -7,7 +7,7 @@
 namespace Command {
 
 struct Command {
-    enum class Type : uint8_t { play, dbgSetVoltage, none };
+    enum class Type : uint8_t { play, dbgSetVoltage, startNet, stopNet, none };
 
     union Payload {
         std::string track;
@@ -22,6 +22,8 @@ struct Command {
 
     static Command play(const char* track);
     static Command dbgSetVoltage(uint32_t voltage);
+    static Command startNet();
+    static Command stopNet();
     static Command none();
 
     ~Command();

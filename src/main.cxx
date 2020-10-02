@@ -15,6 +15,7 @@
 #include "JsonConfig.hxx"
 #include "Led.hxx"
 #include "Log.hxx"
+#include "Net.hxx"
 #include "Power.hxx"
 #include "Rfid.hxx"
 #include "Watchdog.hxx"
@@ -128,6 +129,7 @@ void setup() {
     Rfid::initialize(spiHSPI, hspiMutex, config);
     Watchdog::initialize();
     Led::initialize();
+    Net::initialize();
 
     Audio::start(silentStart);
     Gpio::start();

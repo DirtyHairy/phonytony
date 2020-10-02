@@ -85,6 +85,14 @@ bool JsonConfig::processCommandDefinition(const char* uid, const JsonVariant& de
 
         rfidMap.emplace(uid, Command::Command::dbgSetVoltage(definition["voltage"].as<uint32_t>()));
         return true;
+
+    } else if (typeKey == "startNet") {
+        rfidMap.emplace(uid, Command::Command::startNet());
+        return true;
+
+    } else if (typeKey == "stopNet") {
+        rfidMap.emplace(uid, Command::Command::stopNet());
+        return true;
     }
 
     return false;
