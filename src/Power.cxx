@@ -187,7 +187,7 @@ void Power::deepSleep() {
 
     if (shutdownTaskHandle) return;
 
-    xTaskCreatePinnedToCore(shutdownTask, "shutdown", STACK_SIZE_SHUTDOWN, NULL, configMAX_PRIORITIES - 1,
+    xTaskCreatePinnedToCore(shutdownTask, "shutdown", STACK_SIZE_SHUTDOWN, NULL, TASK_PRIORITY_SHUTDOWN,
                             &shutdownTaskHandle, SERVICE_CORE);
 }
 
