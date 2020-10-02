@@ -27,25 +27,26 @@ DRAM_ATTR TaskHandle_t gpioTaskHandle;
 SPIClass* spi;
 SemaphoreHandle_t spiMutex;
 MCP23S17* mcp23s17;
-bool shutdown = false;
-std::atomic<bool> poweroff;
+
+bool poweroffRequested = false;
+std::atomic<bool> deepSleepNow;
 
 Button buttons[] = {
     Button(
         BTN_PAUSE_MASK,
         []() {
-            if (shutdown) return;
+            if (poweroffRequested) return;
 
             LOG_INFO(TAG, "toggle pause");
             Audio::togglePause();
         },
         BTN_POWEROFF_DELAY,
         []() {
-            if (shutdown) return;
+            if (poweroffRequested) return;
 
             LOG_INFO(TAG, "pre-sleep");
 
-            shutdown = true;
+            poweroffRequested = true;
             Audio::stop();
             Led::stop();
             Rfid::stop();
@@ -57,14 +58,14 @@ Button buttons[] = {
         }),
     Button(BTN_VOLUME_DOWN_MASK, BTN_VOLUME_REPEAT,
            []() {
-               if (shutdown) return;
+               if (poweroffRequested) return;
 
                LOG_INFO(TAG, "volume down");
                Audio::volumeDown();
            }),
     Button(BTN_VOLUME_UP_MASK, BTN_VOLUME_REPEAT,
            []() {
-               if (shutdown) return;
+               if (poweroffRequested) return;
 
                LOG_INFO(TAG, "volume up");
                Audio::volumeUp();
@@ -72,21 +73,21 @@ Button buttons[] = {
     Button(
         BTN_PREVIOUS_MASK,
         []() {
-            if (shutdown) return;
+            if (poweroffRequested) return;
 
             LOG_INFO(TAG, "previous");
             Audio::previous();
         },
         BTN_REWIND_DELAY,
         []() {
-            if (shutdown) return;
+            if (poweroffRequested) return;
 
             Audio::rewind();
             LOG_INFO(TAG, "rewind");
         }),
     Button(BTN_NEXT_MASK, BTN_NEXT_REPEAT,
            []() {
-               if (shutdown) return;
+               if (poweroffRequested) return;
 
                LOG_INFO(TAG, "next");
                Audio::next();
@@ -148,7 +149,7 @@ void gpioTask(void*) {
 void Gpio::initialize(SPIClass& _spi, void* _spiMutex) {
     spi = &_spi;
     spiMutex = _spiMutex;
-    poweroff = false;
+    deepSleepNow = false;
 
     mcp23s17 = new MCP23S17(spi, PIN_MCP23S17_CS, 0);
 
@@ -180,7 +181,7 @@ void Gpio::initialize(SPIClass& _spi, void* _spiMutex) {
 }
 
 void Gpio::prepareSleep() {
-    poweroff = true;
+    deepSleepNow = true;
 
     Lock lock(spiMutex);
 
@@ -199,14 +200,14 @@ void Gpio::start() {
 }
 
 void Gpio::enableAmp() {
-    if (poweroff) return;
+    if (deepSleepNow) return;
 
     Lock lock(spiMutex);
     mcp23s17->digitalWrite(PIN_AMP_ENABLE_MCP, HIGH);
 }
 
 void Gpio::disableAmp() {
-    if (poweroff) return;
+    if (deepSleepNow) return;
 
     Lock lock(spiMutex);
     mcp23s17->digitalWrite(PIN_AMP_ENABLE_MCP, LOW);
@@ -223,7 +224,7 @@ uint8_t Gpio::readTP5400Status() {
 }
 
 void Gpio::enableLed(LED led) {
-    if (poweroff) return;
+    if (deepSleepNow) return;
 
     Lock lock(spiMutex);
 
@@ -238,7 +239,7 @@ bool Gpio::silentStart() {
 }
 
 void Gpio::mfrc522PowerDown(uint8_t state) {
-    if (poweroff) return;
+    if (deepSleepNow) return;
 
     Lock lock(spiMutex);
     mcp23s17->digitalWrite(PIN_MFRC522_RESET_MCP, state);

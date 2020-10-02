@@ -34,6 +34,8 @@ Power::BatteryState batteryState;
 RTC_SLOW_ATTR Power::BatteryState persistentBatteryState;
 std::atomic<uint32_t> dbgFixedVoltage;
 
+TaskHandle_t shutdownTaskHandle = nullptr;
+
 void measureBatteryState();
 
 void initAdc() {
@@ -145,6 +147,24 @@ void powerTask(void*) {
     vTaskDelete(NULL);
 }
 
+void shutdownTask(void*) {
+    LOG_INFO(TAG, "entering deep sleep now");
+
+    Audio::stop();
+    Led::stop();
+    Rfid::stop();
+    Net::prepareSleep();
+    Gpio::prepareSleep();
+
+    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
+    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
+    esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL, ESP_PD_OPTION_OFF);
+    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_ON);
+
+    esp_sleep_enable_ext1_wakeup(static_cast<uint64_t>(1) << (PIN_WAKEUP - GPIO_NUM_32 + 32), ESP_EXT1_WAKEUP_ANY_HIGH);
+    esp_deep_sleep_start();
+}
+
 }  // namespace
 
 void Power::initialize() {
@@ -165,21 +185,12 @@ void Power::start() {
 }
 
 void Power::deepSleep() {
-    Audio::stop();
-    Led::stop();
-    Rfid::stop();
-    Gpio::prepareSleep();
-    Net::prepareSleep();
-
     Lock lock(powerOffMutex);
 
-    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
-    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
-    esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL, ESP_PD_OPTION_OFF);
-    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_ON);
+    if (shutdownTaskHandle) return;
 
-    esp_sleep_enable_ext1_wakeup(static_cast<uint64_t>(1) << (PIN_WAKEUP - GPIO_NUM_32 + 32), ESP_EXT1_WAKEUP_ANY_HIGH);
-    esp_deep_sleep_start();
+    xTaskCreatePinnedToCore(shutdownTask, "shutdown", STACK_SIZE_SHUTDOWN, NULL, TASK_PRIORITY_SHUTDOWN,
+                            &shutdownTaskHandle, SERVICE_CORE);
 }
 
 bool Power::isResumeFromSleep() { return esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_UNDEFINED; }

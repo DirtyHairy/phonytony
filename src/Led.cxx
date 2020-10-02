@@ -6,11 +6,14 @@
 
 #include <Arduino.h>
 #include <freertos/task.h>
+#include <freertos/semphr.h>
 
+#include <atomic>
 #include <cmath>
 
 #include "Audio.hxx"
 #include "Gpio.hxx"
+#include "Lock.hxx"
 #include "Power.hxx"
 #include "config.h"
 
@@ -33,7 +36,8 @@ uint8_t* samples;
 uint8_t sampleIndex;
 Gpio::LED currentLED = Gpio::LED::none;
 
-bool wasPlaying;
+bool stopNow;
+SemaphoreHandle_t stopNowMutex;
 
 Gpio::LED determineLed() {
     Power::BatteryState batteryState = Power::getBatteryState();
@@ -45,7 +49,7 @@ Gpio::LED determineLed() {
 
 void _ledTask() {
     sampleIndex = 0;
-    wasPlaying = Audio::isPlaying();
+    bool wasPlaying = Audio::isPlaying();
 
     while (true) {
         Gpio::LED newLed = determineLed();
@@ -57,7 +61,13 @@ void _ledTask() {
         if (isPlaying != wasPlaying && !isPlaying) sampleIndex = 0;
         wasPlaying = isPlaying;
 
-        ledcWrite(PWM_CHANNEL, isPlaying ? toDutyCycle(255) : samples[sampleIndex]);
+        {
+            Lock lock(stopNowMutex);
+
+            if (stopNow) return;
+
+            ledcWrite(PWM_CHANNEL, isPlaying ? toDutyCycle(255) : samples[sampleIndex]);
+        }
 
         sampleIndex = (sampleIndex + 1) % sampleCount;
         delay(50);
@@ -72,6 +82,8 @@ void ledTask(void*) {
 }  // namespace
 
 void Led::initialize() {
+    stopNowMutex = xSemaphoreCreateMutex();
+
     ledcSetup(PWM_CHANNEL, PWM_FREQ, PWM_RESOLUTION);
     ledcAttachPin(PIN_LED, PWM_CHANNEL);
     ledcWrite(PWM_CHANNEL, 255);
@@ -85,12 +97,17 @@ void Led::initialize() {
 }
 
 void Led::start() {
+    stopNow = false;
+
     xTaskCreatePinnedToCore(ledTask, "led", STACK_SIZE_LED, NULL, TASK_PRIORITY_LED, &ledTaskHandle, SERVICE_CORE);
 }
 
 void Led::stop() {
-    if (ledTaskHandle) vTaskDelete(ledTaskHandle);
-    ledTaskHandle = NULL;
+    {
+        Lock lock(stopNowMutex);
+
+        stopNow = true;
+    }
 
     Gpio::enableLed(Gpio::LED::none);
 }

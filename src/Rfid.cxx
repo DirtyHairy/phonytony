@@ -9,15 +9,16 @@
 #include <freertos/semphr.h>
 #include <freertos/task.h>
 
+#include <atomic>
 #include <iomanip>
 #include <sstream>
 
 #include "Audio.hxx"
 #include "Command.hxx"
 #include "Config.hxx"
+#include "Gpio.hxx"
 #include "Log.hxx"
 #include "MFRC522/MFRC522.h"
-#include "Gpio.hxx"
 #include "config.h"
 
 #define TAG "rfid"
@@ -29,6 +30,8 @@ DRAM_ATTR TaskHandle_t rfidTaskHandle;
 SemaphoreHandle_t spiMutex;
 SPIClass* spi;
 MFRC522* mfrc522;
+
+std::atomic<bool> stopNow;
 
 Config* config;
 
@@ -66,6 +69,8 @@ void _rfidTask() {
     initMfrc522();
 
     while (true) {
+        if (stopNow) return;
+
         MFRC522::Uid uid;
         uint32_t value;
 
@@ -96,6 +101,8 @@ void _rfidTask() {
 
         if (xTaskNotifyWait(0x0, 0x0, &value, 100) == pdFALSE) continue;
 
+        if (stopNow) return;
+
         LOG_INFO(TAG, "RFID RX interrupt: 0x%02x", mfrc522->PCD_ReadRegister(MFRC522::ComIrqReg));
 
         MFRC522::StatusCode readSerialStatus = mfrc522->PICC_Select(&uid);
@@ -108,6 +115,8 @@ void _rfidTask() {
                 sstream << std::setw(2) << std::setfill('0') << std::hex << (int)uid.uidByte[i];
                 if (i != uid.size - 1) sstream << ":";
             }
+
+            if (stopNow) return;
 
             handleRfid(sstream.str());
         } else {
@@ -133,10 +142,9 @@ void Rfid::initialize(SPIClass& _spi, void* _spiMutex, Config& _config) {
 }
 
 void Rfid::start() {
+    stopNow = false;
+
     xTaskCreatePinnedToCore(rfidTask, "rfid", STACK_SIZE_RFID, NULL, TASK_PRIORITY_RFID, &rfidTaskHandle, SERVICE_CORE);
 }
 
-void Rfid::stop() {
-    if (rfidTaskHandle) vTaskDelete(rfidTaskHandle);
-    rfidTaskHandle = NULL;
-}
+void Rfid::stop() { stopNow = true; }
