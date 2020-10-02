@@ -20,108 +20,99 @@
 #define TAG "net"
 
 namespace {
-TaskHandle_t networkTaskHandle = nullptr;
 SemaphoreHandle_t startStopMutex;
 
-std::atomic<bool> isShutdown;
 bool initialized = false;
+std::atomic<bool> isShutdown;
+std::atomic<bool> isRunning;
 
-void init() {
+void startNet() {
     if (initialized) {
+        esp_wifi_start();
+        esp_wifi_set_mode(WIFI_MODE_STA);
+
+        WiFi.setHostname(HOSTNAME);
+        WiFi.begin(SSID, PSK);
+
+    } else {
+        HTTPServer::initialize();
+
         WiFi.persistent(false);
         WiFi.mode(WIFI_STA);
 
+        WiFi.onEvent(
+            [](system_event_t *event) { LOG_INFO(TAG, "wifi connected to %s", event->event_info.connected.ssid); },
+            SYSTEM_EVENT_STA_CONNECTED);
+
+        WiFi.onEvent([](system_event_id_t event) { LOG_INFO(TAG, "wifi disconnected"); },
+                     SYSTEM_EVENT_STA_DISCONNECTED);
+
+        WiFi.onEvent(
+            [](system_event_id_t event) {
+                LOG_INFO(TAG, "got IP %s", WiFi.localIP().toString().c_str());
+
+                if (!MDNS.begin(HOSTNAME))
+                    LOG_ERROR(TAG, "failed to start mDNS responder");
+                else
+                    LOG_INFO(TAG, "mdns responder running");
+
+                HTTPServer::start();
+            },
+            SYSTEM_EVENT_STA_GOT_IP);
+
+        WiFi.setHostname(HOSTNAME);
+        WiFi.begin(SSID, PSK);
+
         initialized = true;
-    } else {
-        esp_wifi_start();
-        esp_wifi_set_mode(WIFI_MODE_STA);
     }
 
-    WiFi.setHostname(HOSTNAME);
-    WiFi.begin(SSID, PSK);
-
-    LOG_INFO(TAG, "connecting to %s", SSID);
-
-    while (!WiFi.isConnected()) {
-        LOG_INFO(TAG, "connecting...");
-
-        delay(1000);
-    }
-
-    LOG_INFO(TAG, "connected with IP %s", WiFi.localIP().toString().c_str());
-
-    if (!MDNS.begin(HOSTNAME))
-        LOG_ERROR(TAG, "failed to start mDNS responder");
-    else
-        LOG_INFO(TAG, "mDNS responder running");
-
-    HTTPServer::start();
-    LOG_INFO(TAG, "server running");
+    LOG_INFO(TAG, "wifi started, connecting to %s", SSID);
 }
 
-void shutdown() {
+void stopNet() {
+    if (!initialized) return;
+
     MDNS.end();
+    HTTPServer::stop();
 
-    esp_wifi_disconnect();
+    WiFi.disconnect();
     esp_wifi_stop();
-}
 
-void _networkTask() {
-    init();
-
-    while (true) {
-        delay(1000);
-    }
-}
-
-void networkTask(void*) {
-    _networkTask();
-
-    vTaskDelete(NULL);
-
-    shutdown();
+    LOG_INFO(TAG, "wifi stopped");
 }
 
 }  // namespace
 
 void Net::initialize() {
     isShutdown = false;
-
+    isRunning = false;
     startStopMutex = xSemaphoreCreateMutex();
-
-    HTTPServer::initialize();
 }
 
 void Net::start() {
     Lock lock(startStopMutex);
 
-    if (isShutdown || networkTaskHandle) return;
+    if (isShutdown || isRunning) return;
 
-    LOG_INFO(TAG, "starting...");
+    startNet();
 
-    xTaskCreatePinnedToCore(networkTask, "net", STACK_SIZE_NET, NULL, TASK_PRIORITY_NET, &networkTaskHandle,
-                            SERVICE_CORE);
+    isRunning = true;
 }
 
 void Net::stop() {
     Lock lock(startStopMutex);
 
-    LOG_INFO(TAG, "stopping...");
+    if (isShutdown || !isRunning) return;
 
-    if (!networkTaskHandle) return;
+    stopNet();
 
-    HTTPServer::stop();
-
-    vTaskDelete(networkTaskHandle);
-    networkTaskHandle = nullptr;
-
-    shutdown();
+    isRunning = false;
 }
 
 void Net::prepareSleep() {
     if (isShutdown) return;
 
-    isShutdown = true;
-
     stop();
+
+    isShutdown = true;
 }

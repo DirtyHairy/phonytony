@@ -10,6 +10,8 @@
 #include <freertos/semphr.h>
 #include <freertos/task.h>
 
+#include <atomic>
+
 #include "Audio.hxx"
 #include "Lock.hxx"
 #include "Power.hxx"
@@ -44,6 +46,8 @@ AsyncEventSource events("/events");
 AsyncEventSourceWithCORS eventsHandler(events);
 static char serializedMessage[1024] = "";
 
+std::atomic<bool> isRunning;
+
 void sendUpdate() {
     StaticJsonDocument<1024> json;
     JsonObject audio = json.createNestedObject("audio");
@@ -74,7 +78,7 @@ void _serverTask() {
     while (true) {
         uint32_t value;
 
-        xTaskNotifyWait(0x0, 0x0, &value, 1000);
+        xTaskNotifyWait(0x0, 0x0, &value, isRunning ? 1000 : portMAX_DELAY);
 
         sendUpdate();
     }
@@ -126,8 +130,9 @@ void setupServer() {
 }  // namespace
 
 void HTTPServer::initialize() {
-    startStopMutex = xSemaphoreCreateMutex();
+    isRunning = false;
     messageMutex = xSemaphoreCreateMutex();
+    startStopMutex = xSemaphoreCreateMutex();
 
     SPIFFS.begin();
 
@@ -135,27 +140,30 @@ void HTTPServer::initialize() {
 }
 
 void HTTPServer::start() {
+    if (isRunning) return;
+
     Lock lock(startStopMutex);
 
     server.begin();
 
-    xTaskCreatePinnedToCore(serverTask, "server", STACK_SIZE_SERVER, NULL, TASK_PRIORITY_SERVER, &serverTaskHandle,
-                            SERVICE_CORE);
+    if (serverTaskHandle)
+        xTaskNotify(serverTaskHandle, 0, eNoAction);
+    else
+        xTaskCreatePinnedToCore(serverTask, "server", STACK_SIZE_SERVER, NULL, TASK_PRIORITY_SERVER, &serverTaskHandle,
+                                SERVICE_CORE);
+
+    isRunning = true;
 }
 
 void HTTPServer::stop() {
+    if (!isRunning) return;
+
     Lock lock(startStopMutex);
 
     server.end();
-
-    if (!serverTaskHandle) return;
-
-    vTaskDelete(serverTaskHandle);
-    serverTaskHandle = nullptr;
+    isRunning = false;
 }
 
 void HTTPServer::sendUpdate() {
-    Lock lock(startStopMutex);
-
-    if (serverTaskHandle) xTaskNotify(serverTaskHandle, 0, eNoAction);
+    if (isRunning) xTaskNotify(serverTaskHandle, 0, eNoAction);
 }

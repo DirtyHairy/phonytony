@@ -41,8 +41,6 @@ struct State {
     uint32_t track;
     size_t position;
 
-    State() { album[0] = 0; }
-
     void setAlbum(const char* album) { strncpy(this->album, album, 255); }
 
     void clearAlbum() { album[0] = 0; }
