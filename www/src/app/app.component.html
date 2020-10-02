@@ -1,0 +1,26 @@
+<mat-toolbar color="primary">
+  <button mat-icon-button type="button">
+    <mat-icon>menu</mat-icon>
+  </button>
+  <span>Adabox</span>
+</mat-toolbar>
+
+<mat-card class="status">
+  <mat-card-title>Status</mat-card-title>
+  <mat-card-content>
+    <div>
+      <span class="label">IDF version:</span>
+      <span>{{(serverEventsService.getMessages() | async)!['idf-version']}}</span>
+    </div>
+
+    <div>
+      <span class="label">Free heap:</span>
+      <span>{{(serverEventsService.getMessages() | async)!.heap}}</span>
+    </div>
+
+    <div>
+      <span class="label">Time:</span>
+      <span>{{(serverEventsService.getMessages() | async)!.time}}</span>
+    </div>
+  </mat-card-content>
+</mat-card>

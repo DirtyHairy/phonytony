@@ -13,6 +13,7 @@
 
 #include "Lock.hxx"
 #include "Log.hxx"
+#include "Server.hxx"
 #include "config.h"
 #include "local_config.h"
 
@@ -53,6 +54,9 @@ void init() {
         LOG_ERROR(TAG, "failed to start mDNS responder");
     else
         LOG_INFO(TAG, "mDNS responder running");
+
+    HTTPServer::start();
+    LOG_INFO(TAG, "server running");
 }
 
 void shutdown() {
@@ -84,12 +88,14 @@ void Net::initialize() {
     isShutdown = false;
 
     startStopMutex = xSemaphoreCreateMutex();
+
+    HTTPServer::initialize();
 }
 
 void Net::start() {
-    if (isShutdown) return;
-
     Lock lock(startStopMutex);
+
+    if (isShutdown || networkTaskHandle) return;
 
     LOG_INFO(TAG, "starting...");
 
@@ -102,13 +108,14 @@ void Net::stop() {
 
     LOG_INFO(TAG, "stopping...");
 
-    if (networkTaskHandle) {
-        vTaskDelete(networkTaskHandle);
+    if (!networkTaskHandle) return;
 
-        networkTaskHandle = nullptr;
+    HTTPServer::stop();
 
-        shutdown();
-    }
+    vTaskDelete(networkTaskHandle);
+    networkTaskHandle = nullptr;
+
+    shutdown();
 }
 
 void Net::prepareSleep() {
