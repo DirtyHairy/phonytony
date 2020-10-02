@@ -16,6 +16,7 @@
 #include "Lock.hxx"
 #include "Log.hxx"
 #include "Power.hxx"
+#include "Server.hxx"
 #include "Signal.hxx"
 #include "Watchdog.hxx"
 
@@ -39,6 +40,8 @@ struct State {
     char album[256];
     uint32_t track;
     size_t position;
+
+    State() { album[0] = 0; }
 
     void setAlbum(const char* album) { strncpy(this->album, album, 255); }
 
@@ -120,6 +123,14 @@ void i2sStreamTask(void* payload) {
     }
 }
 
+void setPaused(bool _paused) {
+    if (paused == _paused) return;
+
+    paused = _paused;
+
+    HTTPServer::sendUpdate();
+}
+
 void resetAudio() {
     if (paused) {
         clearDmaBufferOnResume = true;
@@ -131,13 +142,19 @@ void setVolume(int32_t newVolume) {
     Lock lock(stateMutex);
 
     state.volume = volume = newVolume;
+
+    HTTPServer::sendUpdate();
 }
 
 void updatePlaybackState() {
     Lock lock(stateMutex);
 
+    uint32_t oldTrack = state.track;
+
     state.track = player.getTrack();
     state.position = player.getSeekPosition();
+
+    if (state.track != oldTrack) HTTPServer::sendUpdate();
 }
 
 std::string directoryForAlbum(const char* album) { return std::string("/music/") + std::string(album); }
@@ -147,9 +164,9 @@ void play(const char* album) {
 
     if (strcmp(state.album, album) == 0 && player.isValid()) {
         player.rewind();
-        paused = false;
+        setPaused(false);
     } else {
-        paused = !player.open(directoryForAlbum(album).c_str());
+        setPaused(!player.open(directoryForAlbum(album).c_str()));
     }
 
     if (paused) {
@@ -158,6 +175,8 @@ void play(const char* album) {
     } else {
         state.setAlbum(album);
         LOG_INFO(TAG, "playback switched to %s", album);
+
+        HTTPServer::sendUpdate();
     }
 }
 
@@ -167,7 +186,7 @@ void receiveAndHandleCommand(bool block) {
     if (xQueueReceive(commandQueue, (void*)&command, block ? portMAX_DELAY : 0) == pdTRUE) {
         switch (command.type) {
             case Command::cmdTogglePause:
-                paused = !paused;
+                setPaused(!paused);
                 break;
 
             case Command::cmdVolumeUp:
@@ -256,7 +275,7 @@ bool tryToRestore() {
 bool pauseI2s() { return ((!player.isValid() || paused) && !signal.isActive()) || shutdown; }
 
 void audioTask_() {
-    paused = !tryToRestore() || silentStart;
+    setPaused(!tryToRestore() || silentStart);
 
     Chunk* chunk = new Chunk();
 
@@ -288,7 +307,7 @@ void audioTask_() {
 
                     if (player.isFinished()) {
                         player.rewind();
-                        paused = true;
+                        setPaused(true);
                     }
                 } else {
                     memset(chunk->samples + 2 * samplesDecoded, 0, PLAYBACK_CHUNK_SIZE - samplesDecoded * 4);
@@ -403,6 +422,24 @@ void Audio::stop() {
 }
 
 bool Audio::isPlaying() { return player.isValid() && !paused; }
+
+std::string Audio::currentAlbum() {
+    Lock lock(stateMutex);
+
+    return state.album;
+}
+
+uint32_t Audio::currentTrack() {
+    Lock lock(stateMutex);
+
+    return state.track;
+}
+
+int32_t Audio::currentVolume() {
+    Lock lock(stateMutex);
+
+    return state.volume;
+}
 
 void Audio::signalError() { dispatchCommand(Command::cmdSignalError); }
 

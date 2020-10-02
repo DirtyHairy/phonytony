@@ -1,6 +1,8 @@
 #ifndef AUDIO_HXX
 #define AUDIO_HXX
 
+#include <string>
+
 #include "config.h"
 
 namespace Audio {
@@ -20,6 +22,9 @@ void play(const char* album);
 void stop();
 
 bool isPlaying();
+std::string currentAlbum();
+uint32_t currentTrack();
+int32_t currentVolume();
 
 void signalError();
 void signalCommandReceived();

@@ -20,7 +20,7 @@
 #define TAG "net"
 
 namespace {
-DRAM_ATTR TaskHandle_t networkTaskHandle = nullptr;
+TaskHandle_t networkTaskHandle = nullptr;
 SemaphoreHandle_t startStopMutex;
 
 std::atomic<bool> isShutdown;

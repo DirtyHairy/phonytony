@@ -1,7 +1,19 @@
 #include "Server.hxx"
 
+// clang-format off
+#include <freertos/FreeRTOS.h>
+// clang-format on
+
+#include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
 #include <SPIFFS.h>
+#include <freertos/semphr.h>
+#include <freertos/task.h>
+
+#include "Audio.hxx"
+#include "Lock.hxx"
+#include "Power.hxx"
+#include "config.h"
 
 namespace {
 
@@ -23,10 +35,56 @@ class AsyncEventSourceWithCORS : public AsyncWebHandler {
     AsyncEventSource& delegateSource;
 };
 
+TaskHandle_t serverTaskHandle = nullptr;
+SemaphoreHandle_t messageMutex;
+SemaphoreHandle_t startStopMutex;
+
 AsyncWebServer server(80);
 AsyncEventSource events("/events");
 AsyncEventSourceWithCORS eventsHandler(events);
 static char serializedMessage[1024] = "";
+
+void sendUpdate() {
+    StaticJsonDocument<1024> json;
+    JsonObject audio = json.createNestedObject("audio");
+    JsonObject power = json.createNestedObject("power");
+    Power::BatteryState batteryState = Power::getBatteryState();
+
+    audio["isPlaying"] = Audio::isPlaying();
+    audio["currentAlbum"] = Audio::currentAlbum();
+    audio["currentTrack"] = Audio::currentTrack();
+    audio["volume"] = Audio::currentVolume();
+
+    power["voltage"] = batteryState.voltage;
+    power["level"] = static_cast<uint8_t>(batteryState.level);
+    power["state"] = static_cast<uint8_t>(batteryState.state);
+
+    json["heap"] = esp_get_free_heap_size();
+
+    Lock lock(messageMutex);
+
+    serializeJson(json, serializedMessage, 1024);
+
+    events.send(serializedMessage, "update", 0, 1000);
+}
+
+void _serverTask() {
+    sendUpdate();
+
+    while (true) {
+        uint32_t value;
+
+        xTaskNotifyWait(0x0, 0x0, &value, 1000);
+
+        sendUpdate();
+    }
+}
+
+void serverTask(void*) {
+    _serverTask();
+
+    vTaskDelete(NULL);
+}
 
 void notFound(AsyncWebServerRequest* request) { request->send(404, "text/plain", "Not Found"); }
 
@@ -34,7 +92,11 @@ const String templateProcessor(const String& key) { return key == "FROM_BOX" ? "
 
 void setupServer() {
     // server-side events
-    events.onConnect([](AsyncEventSourceClient* client) { client->send(serializedMessage, "update", 0, 1000); });
+    events.onConnect([](AsyncEventSourceClient* client) {
+        Lock lock(messageMutex);
+
+        client->send(serializedMessage, "update", 0, 1000);
+    });
     server.addHandler(&eventsHandler);
 
     // templating for index.html
@@ -64,12 +126,36 @@ void setupServer() {
 }  // namespace
 
 void HTTPServer::initialize() {
+    startStopMutex = xSemaphoreCreateMutex();
+    messageMutex = xSemaphoreCreateMutex();
+
     SPIFFS.begin();
 
     setupServer();
-    strcpy(serializedMessage, "hulpe");
 }
 
-void HTTPServer::start() { server.begin(); }
+void HTTPServer::start() {
+    Lock lock(startStopMutex);
 
-void HTTPServer::stop() { server.end(); }
+    server.begin();
+
+    xTaskCreatePinnedToCore(serverTask, "server", STACK_SIZE_SERVER, NULL, TASK_PRIORITY_SERVER, &serverTaskHandle,
+                            SERVICE_CORE);
+}
+
+void HTTPServer::stop() {
+    Lock lock(startStopMutex);
+
+    server.end();
+
+    if (!serverTaskHandle) return;
+
+    vTaskDelete(serverTaskHandle);
+    serverTaskHandle = nullptr;
+}
+
+void HTTPServer::sendUpdate() {
+    Lock lock(startStopMutex);
+
+    if (serverTaskHandle) xTaskNotify(serverTaskHandle, 0, eNoAction);
+}

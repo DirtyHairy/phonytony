@@ -6,7 +6,7 @@
 namespace Power {
 
 struct BatteryState {
-    enum State { discharging, charging, standby };
+    enum State : uint8_t { discharging = 0, charging = 1, standby = 2 };
     enum Level : uint8_t { poweroff = 0, critical = 1, low = 2, full = 3 };
 
     State state;
