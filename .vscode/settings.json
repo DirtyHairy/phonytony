@@ -50,5 +50,8 @@
     "[cpp]": {
         "editor.formatOnSave": true
     },
+    "[typescript]": {
+        "editor.formatOnSave": true
+    },
     "restructuredtext.confPath": ""
 }

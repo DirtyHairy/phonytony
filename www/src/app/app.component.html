@@ -5,22 +5,60 @@
   <span>Adabox</span>
 </mat-toolbar>
 
-<mat-card class="status">
-  <mat-card-title>Status</mat-card-title>
+<mat-card class="status-card">
+  <mat-card-title>Audio</mat-card-title>
+
   <mat-card-content>
     <div>
-      <span class="label">IDF version:</span>
-      <span>{{(serverEventsService.getMessages() | async)!['idf-version']}}</span>
+      <span class="label">Widergabe:</span>
+      <span>{{(serverEventsService.getMessages() | async)!.audio.isPlaying ? 'ja' : 'nein'}}</span>
     </div>
 
     <div>
-      <span class="label">Free heap:</span>
+      <span class="label">Album:</span>
+      <span>{{(serverEventsService.getMessages() | async)!.audio.currentAlbum}}</span>
+    </div>
+
+    <div>
+      <span class="label">Track:</span>
+      <span>{{(serverEventsService.getMessages() | async)!.audio.currentTrack}}</span>
+    </div>
+
+    <div>
+      <span class="label">Lautstärke:</span>
+      <span>{{(serverEventsService.getMessages() | async)!.audio.volume}}</span>
+    </div>
+  </mat-card-content>
+</mat-card>
+
+<mat-card class="status-card">
+  <mat-card-title>Batterie</mat-card-title>
+
+  <mat-card-content>
+    <div>
+      <span class="label">Ladezustand:</span>
+      <span>{{(serverEventsService.getMessages() | async)!.power.level | batteryLevel}}</span>
+    </div>
+
+    <div>
+      <span class="label">Zustand:</span>
+      <span>{{(serverEventsService.getMessages() | async)!.power.state | powerState}}</span>
+    </div>
+
+    <div>
+      <span class="label">Spannung:</span>
+      <span>{{(serverEventsService.getMessages() | async)!.power.voltage | voltage}}</span>
+    </div>
+  </mat-card-content>
+</mat-card>
+
+<mat-card class="status-card">
+  <mat-card-title>Status</mat-card-title>
+
+  <mat-card-content>
+    <div>
+      <span class="label">Freier heap:</span>
       <span>{{(serverEventsService.getMessages() | async)!.heap}}</span>
-    </div>
-
-    <div>
-      <span class="label">Time:</span>
-      <span>{{(serverEventsService.getMessages() | async)!.time}}</span>
     </div>
   </mat-card-content>
 </mat-card>
