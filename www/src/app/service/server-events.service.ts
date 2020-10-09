@@ -2,6 +2,7 @@ import { BatteryLevel, Message, PowerState } from '../model/message';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
 
 import { Injectable } from '@angular/core';
+import { environment } from 'src/environments/environment';
 
 const INITIAL_MESSAGE: Message = {
     audio: {
@@ -24,7 +25,7 @@ const INITIAL_MESSAGE: Message = {
 export class ServerEventsService {
     constructor() {
         // tslint:disable-next-line: no-any
-        this.source.addEventListener('update' as any, (e: MessageEvent) => this.messages.next(JSON.parse(e.data)));
+        this.source.addEventListener('status' as any, (e: MessageEvent) => this.messages.next(JSON.parse(e.data)));
     }
 
     private messages = new BehaviorSubject<Message>(INITIAL_MESSAGE);
@@ -36,6 +37,6 @@ export class ServerEventsService {
 
     private url(): string {
         // tslint:disable-next-line: no-any
-        return (window as any).__served_from_box === 'yes' ? '/events' : 'http://adabox.local/events';
+        return environment.boxUrl + '/events';
     }
 }

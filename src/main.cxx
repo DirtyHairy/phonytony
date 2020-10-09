@@ -18,6 +18,7 @@
 #include "Net.hxx"
 #include "Power.hxx"
 #include "Rfid.hxx"
+#include "Server.hxx"
 #include "Watchdog.hxx"
 #include "config.h"
 
@@ -130,6 +131,7 @@ void setup() {
     Watchdog::initialize();
     Led::initialize();
     Net::initialize();
+    HTTPServer::initialize();
 
     Audio::start(silentStart);
     Gpio::start();

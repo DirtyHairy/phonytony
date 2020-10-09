@@ -4,10 +4,13 @@
 #include <freertos/FreeRTOS.h>
 // clang-format on
 
-#include <ESPmDNS.h>
-#include <WiFi.h>
+#include <Arduino.h>
+#include <esp_event_loop.h>
+#include <esp_wifi.h>
 #include <freertos/semphr.h>
 #include <freertos/task.h>
+#include <lwip/apps/sntp.h>
+#include <mdns.h>
 
 #include <atomic>
 
@@ -20,99 +23,137 @@
 #define TAG "net"
 
 namespace {
-SemaphoreHandle_t startStopMutex;
 
-bool initialized = false;
-std::atomic<bool> isShutdown;
+std::atomic<bool> networkInitialized;
 std::atomic<bool> isRunning;
+bool firstConnectComplete;
 
-void startNet() {
-    if (initialized) {
-        esp_wifi_start();
-        esp_wifi_set_mode(WIFI_MODE_STA);
-
-        WiFi.setHostname(HOSTNAME);
-        WiFi.begin(SSID, PSK);
-
-    } else {
-        HTTPServer::initialize();
-
-        WiFi.persistent(false);
-        WiFi.mode(WIFI_STA);
-
-        WiFi.onEvent(
-            [](system_event_t *event) { LOG_INFO(TAG, "wifi connected to %s", event->event_info.connected.ssid); },
-            SYSTEM_EVENT_STA_CONNECTED);
-
-        WiFi.onEvent([](system_event_id_t event) { LOG_INFO(TAG, "wifi disconnected"); },
-                     SYSTEM_EVENT_STA_DISCONNECTED);
-
-        WiFi.onEvent(
-            [](system_event_id_t event) {
-                LOG_INFO(TAG, "got IP %s", WiFi.localIP().toString().c_str());
-
-                if (!MDNS.begin(HOSTNAME))
-                    LOG_ERROR(TAG, "failed to start mDNS responder");
-                else
-                    LOG_INFO(TAG, "mdns responder running");
-
-                HTTPServer::start();
-            },
-            SYSTEM_EVENT_STA_GOT_IP);
-
-        WiFi.setHostname(HOSTNAME);
-        WiFi.begin(SSID, PSK);
-
-        initialized = true;
+void startMdns() {
+    if (mdns_init()) {
+        LOG_ERROR(TAG, "failed to start MDNS");
+        return;
     }
 
-    LOG_INFO(TAG, "wifi started, connecting to %s", SSID);
+    mdns_hostname_set(HOSTNAME);
+    mdns_instance_name_set(HOSTNAME);
+
+    LOG_INFO(TAG, "MDNS up and running");
 }
 
-void stopNet() {
-    if (!initialized) return;
+void startSntp() {
+    sntp_setoperatingmode(SNTP_OPMODE_POLL);
+    sntp_setservername(0, (char *)"pool.ntp.org");
+    sntp_init();
 
-    MDNS.end();
-    HTTPServer::stop();
+    while (sntp_get_sync_status() != SNTP_SYNC_STATUS_COMPLETED) delay(1);
 
-    WiFi.disconnect();
-    esp_wifi_stop();
+    LOG_INFO(TAG, "SNTP sync complete");
+}
 
-    LOG_INFO(TAG, "wifi stopped");
+esp_err_t eventHandler(void *, system_event_t *event) {
+    switch (event->event_id) {
+        case SYSTEM_EVENT_STA_START:
+            LOG_INFO(TAG, "STA started");
+
+            if (tcpip_adapter_set_hostname(TCPIP_ADAPTER_IF_STA, HOSTNAME) != ESP_OK)
+                LOG_ERROR(TAG, "failed to configure hostname");
+
+            if (esp_wifi_connect() != ESP_OK) LOG_ERROR(TAG, "wifi connect failed");
+
+            break;
+
+        case SYSTEM_EVENT_STA_STOP:
+            LOG_INFO(TAG, "STA stopped");
+
+            mdns_free();
+            sntp_stop();
+            HTTPServer::stop();
+
+            break;
+
+        case SYSTEM_EVENT_STA_CONNECTED: {
+            uint8_t *bssid = event->event_info.connected.bssid;
+            LOG_INFO(TAG, "connected to %s / %02x:%02x:%02x:%02x:%02x:%02x", event->event_info.connected.ssid, bssid[0],
+                     bssid[1], bssid[2], bssid[3], bssid[4], bssid[5]);
+        }
+
+        break;
+
+        case SYSTEM_EVENT_STA_GOT_IP:
+            LOG_INFO(TAG, "got IP %s", ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
+
+            startMdns();
+
+            if (!firstConnectComplete) {
+                startSntp();
+            }
+
+            HTTPServer::start();
+
+            firstConnectComplete = true;
+
+            break;
+
+        case SYSTEM_EVENT_STA_DISCONNECTED:
+            LOG_INFO(TAG, "wifi disconnected");
+
+            break;
+
+        default:
+            break;
+    }
+
+    return ESP_OK;
 }
 
 }  // namespace
 
 void Net::initialize() {
-    isShutdown = false;
+    networkInitialized = false;
     isRunning = false;
-    startStopMutex = xSemaphoreCreateMutex();
 }
 
 void Net::start() {
-    Lock lock(startStopMutex);
+    if (isRunning) return;
 
-    if (isShutdown || isRunning) return;
+    if (!networkInitialized) {
+        tcpip_adapter_init();
+        esp_event_loop_init(eventHandler, nullptr);
 
-    startNet();
+        wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+        if (esp_wifi_init(&cfg) != ESP_OK || esp_wifi_set_storage(WIFI_STORAGE_RAM)) {
+            Serial.println("failed to init wifi");
+            return;
+        }
+
+        static wifi_config_t wifiConfig;
+        strcpy((char *)&wifiConfig.sta.ssid, SSID);
+        strcpy((char *)&wifiConfig.sta.password, PSK);
+        wifiConfig.sta.sort_method = WIFI_CONNECT_AP_BY_SIGNAL;
+        wifiConfig.sta.scan_method = WIFI_ALL_CHANNEL_SCAN;
+
+        if (esp_wifi_set_mode(WIFI_MODE_STA) != ESP_OK || esp_wifi_set_config(ESP_IF_WIFI_STA, &wifiConfig) != ESP_OK) {
+            LOG_ERROR(TAG, "failed to configure wifi");
+            return;
+        }
+
+        networkInitialized = true;
+    }
+
+    if (esp_wifi_start() != ESP_OK) {
+        LOG_ERROR(TAG, "failed to start wifi");
+        return;
+    }
 
     isRunning = true;
 }
 
 void Net::stop() {
-    Lock lock(startStopMutex);
+    if (!isRunning) return;
 
-    if (isShutdown || !isRunning) return;
-
-    stopNet();
+    esp_wifi_stop();
 
     isRunning = false;
 }
 
-void Net::prepareSleep() {
-    if (isShutdown) return;
-
-    stop();
-
-    isShutdown = true;
-}
+void Net::prepareSleep() { esp_wifi_stop(); }
