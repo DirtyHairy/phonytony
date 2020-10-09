@@ -57,8 +57,16 @@
 
   <mat-card-content>
     <div>
-      <span class="label">Freier heap:</span>
-      <span>{{(serverEventsService.getMessages() | async)!.heap}}</span>
+      <span class="label">Freier Heap:</span>
+      <span>{{(serverEventsService.getMessages() | async)!.heap.freeDRAM}} Bytes (DRAM) /
+        {{(serverEventsService.getMessages() | async)!.heap.freePSRAM}} Bytes (PSRAM)
+      </span>
+    </div>
+    <div>
+      <span class="label">Größter freier Block:</span>
+      <span>{{(serverEventsService.getMessages() | async)!.heap.largestBlockDRAM}} Bytes (DRAM) /
+        {{(serverEventsService.getMessages() | async)!.heap.largestBlockPSRAM}} Bytes (PSRAM)
+      </span>
     </div>
   </mat-card-content>
 </mat-card>

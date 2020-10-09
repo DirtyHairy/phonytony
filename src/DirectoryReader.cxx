@@ -103,7 +103,7 @@ bool DirectoryReader::scanDirectory(File& root) {
     root.rewindDirectory();
 
     buffer = (char*)ps_malloc(bufferSize);
-    playlist = (char**)malloc(length * sizeof(char*));
+    playlist = (char**)ps_malloc(length * sizeof(char*));
 
     char* buf = buffer;
     uint32_t i = 0;
@@ -144,7 +144,7 @@ bool DirectoryReader::readIndex(File& index) {
 
     if (length == 0) return true;
 
-    playlist = (char**)malloc(length * sizeof(char*));
+    playlist = (char**)ps_malloc(length * sizeof(char*));
     uint32_t iTrack = 0;
     lastChar = 0;
 

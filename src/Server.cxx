@@ -263,6 +263,7 @@ void updateStatusMessage() {
     StaticJsonDocument<1024> json;
     JsonObject audio = json.createNestedObject("audio");
     JsonObject power = json.createNestedObject("power");
+    JsonObject heap = json.createNestedObject("heap");
     Power::BatteryState batteryState = Power::getBatteryState();
 
     audio["isPlaying"] = Audio::isPlaying();
@@ -274,7 +275,10 @@ void updateStatusMessage() {
     power["level"] = static_cast<uint8_t>(batteryState.level);
     power["state"] = static_cast<uint8_t>(batteryState.state);
 
-    json["heap"] = esp_get_free_heap_size();
+    heap["freeDRAM"] = heap_caps_get_free_size(MALLOC_CAP_DEFAULT | MALLOC_CAP_INTERNAL);
+    heap["freePSRAM"] = heap_caps_get_free_size(MALLOC_CAP_DEFAULT | MALLOC_CAP_SPIRAM);
+    heap["largestBlockDRAM"] = heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT | MALLOC_CAP_INTERNAL);
+    heap["largestBlockPSRAM"] = heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT | MALLOC_CAP_SPIRAM);
 
     Lock lock(statusMessageMutex);
     serializeJson(json, serializedStatusMessage, 1024);

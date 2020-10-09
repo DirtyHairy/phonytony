@@ -27,5 +27,30 @@ export interface Message {
         state: PowerState;
     };
 
-    heap: number;
+    heap: {
+        freeDRAM: number;
+        freePSRAM: number;
+        largestBlockDRAM: number;
+        largestBlockPSRAM: number;
+    };
 }
+
+export const EMPTY_MESSAGE: Message = {
+    audio: {
+        isPlaying: false,
+        currentAlbum: '',
+        currentTrack: -1,
+        volume: -1,
+    },
+    power: {
+        voltage: -1,
+        level: BatteryLevel.invalid,
+        state: PowerState.invalid,
+    },
+    heap: {
+        freeDRAM: -1,
+        freePSRAM: -1,
+        largestBlockDRAM: -1,
+        largestBlockPSRAM: -1,
+    },
+};
