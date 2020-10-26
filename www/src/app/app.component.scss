@@ -3,10 +3,18 @@
     max-width: 80vw;
     margin: auto;
     margin-top: 5em;
+    display: block;
 }
 
-.label {
-    font-weight: bold;
-    display: inline-block;
-    width: 12em;
+.loader-overlay {
+    position: fixed;
+    z-index: 10000;
+    background-color: rgba(0, 0, 0, 0.3);
+    width: 100vw;
+    height: 100vh;
+    top: 0;
+    left: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }

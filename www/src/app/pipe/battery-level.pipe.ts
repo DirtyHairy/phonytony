@@ -4,7 +4,7 @@ import { BatteryLevel } from '../model/message';
 
 @Pipe({ name: 'batteryLevel' })
 export class BatteryLevelPipe implements PipeTransform {
-    transform(value: BatteryLevel): string {
+    transform(value?: BatteryLevel): string {
         switch (value) {
             case BatteryLevel.critical:
                 return 'kritisch';
@@ -17,6 +17,9 @@ export class BatteryLevelPipe implements PipeTransform {
 
             case BatteryLevel.poweroff:
                 return 'Box schaltet jetzt ab';
+
+            case undefined:
+                return '';
 
             default:
                 return 'invalid';

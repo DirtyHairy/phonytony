@@ -1,0 +1,17 @@
+<mat-card class="status-card" *ngIf="messages$ | async">
+    <mat-card-title>Batterie</mat-card-title>
+
+    <mat-card-content>
+        <app-status-card-line label="Ladezustand:">
+            {{(messages$ | async)?.power?.level | batteryLevel}}
+        </app-status-card-line>
+
+        <app-status-card-line label="Zustand:">
+            {{(messages$ | async)?.power?.state | powerState}}
+        </app-status-card-line>
+
+        <app-status-card-line label="Spannung:">
+            {{(messages$ | async)?.power?.voltage | voltage}}
+        </app-status-card-line>
+    </mat-card-content>
+</mat-card>

@@ -53,5 +53,9 @@
     "[typescript]": {
         "editor.formatOnSave": true
     },
-    "restructuredtext.confPath": ""
+    "[html]": {
+        "editor.formatOnSave": true
+    },
+    "restructuredtext.confPath": "",
+    "typescript.tsdk": "www/node_modules/typescript/lib"
 }

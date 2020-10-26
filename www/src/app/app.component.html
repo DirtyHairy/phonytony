@@ -1,72 +1,11 @@
-<mat-toolbar color="primary">
-  <button mat-icon-button type="button">
-    <mat-icon>menu</mat-icon>
-  </button>
-  <span>Adabox</span>
-</mat-toolbar>
+<app-phonytony-toolbar></app-phonytony-toolbar>
 
-<mat-card class="status-card">
-  <mat-card-title>Audio</mat-card-title>
+<app-status-card-playback class="status-card"></app-status-card-playback>
 
-  <mat-card-content>
-    <div>
-      <span class="label">Widergabe:</span>
-      <span>{{(serverEventsService.getMessages() | async)!.audio.isPlaying ? 'ja' : 'nein'}}</span>
-    </div>
+<app-status-card-battery class="status-card"></app-status-card-battery>
 
-    <div>
-      <span class="label">Album:</span>
-      <span>{{(serverEventsService.getMessages() | async)!.audio.currentAlbum}}</span>
-    </div>
+<app-status-card-memory class="status-card"></app-status-card-memory>
 
-    <div>
-      <span class="label">Track:</span>
-      <span>{{(serverEventsService.getMessages() | async)!.audio.currentTrack}}</span>
-    </div>
-
-    <div>
-      <span class="label">Lautstärke:</span>
-      <span>{{(serverEventsService.getMessages() | async)!.audio.volume}}</span>
-    </div>
-  </mat-card-content>
-</mat-card>
-
-<mat-card class="status-card">
-  <mat-card-title>Batterie</mat-card-title>
-
-  <mat-card-content>
-    <div>
-      <span class="label">Ladezustand:</span>
-      <span>{{(serverEventsService.getMessages() | async)!.power.level | batteryLevel}}</span>
-    </div>
-
-    <div>
-      <span class="label">Zustand:</span>
-      <span>{{(serverEventsService.getMessages() | async)!.power.state | powerState}}</span>
-    </div>
-
-    <div>
-      <span class="label">Spannung:</span>
-      <span>{{(serverEventsService.getMessages() | async)!.power.voltage | voltage}}</span>
-    </div>
-  </mat-card-content>
-</mat-card>
-
-<mat-card class="status-card">
-  <mat-card-title>Status</mat-card-title>
-
-  <mat-card-content>
-    <div>
-      <span class="label">Freier Heap:</span>
-      <span>{{(serverEventsService.getMessages() | async)!.heap.freeDRAM}} Bytes (DRAM) /
-        {{(serverEventsService.getMessages() | async)!.heap.freePSRAM}} Bytes (PSRAM)
-      </span>
-    </div>
-    <div>
-      <span class="label">Größter freier Block:</span>
-      <span>{{(serverEventsService.getMessages() | async)!.heap.largestBlockDRAM}} Bytes (DRAM) /
-        {{(serverEventsService.getMessages() | async)!.heap.largestBlockPSRAM}} Bytes (PSRAM)
-      </span>
-    </div>
-  </mat-card-content>
-</mat-card>
+<div class="loader-overlay" *ngIf="!(managementService.isConnected() && (messages$ | async))">
+  <mat-progress-spinner mode="indeterminate" color="primary"></mat-progress-spinner>
+</div>

@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { ServerEventsService } from './service/server-events.service';
+import { ManagementService } from './service/management.service';
 
 @Component({
     selector: 'app-root',
@@ -7,5 +7,7 @@ import { ServerEventsService } from './service/server-events.service';
     styleUrls: ['./app.component.scss'],
 })
 export class AppComponent {
-    constructor(public serverEventsService: ServerEventsService) {}
+    public messages$ = this.managementService.messages();
+
+    constructor(public managementService: ManagementService) {}
 }

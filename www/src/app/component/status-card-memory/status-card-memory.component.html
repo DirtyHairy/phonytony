@@ -1,0 +1,14 @@
+<mat-card class="status-card" *ngIf="messages$ | async">
+  <mat-card-title>Status</mat-card-title>
+
+  <mat-card-content>
+    <app-status-card-line label="Freier Heap:">
+      {{(messages$ | async)?.heap?.freeDRAM}} Bytes (DRAM) /
+      {{(messages$ | async)?.heap?.freePSRAM}} Bytes (PSRAM)
+    </app-status-card-line>
+    <app-status-card-line label="Größter freier Block:">
+      {{(messages$ | async)?.heap?.largestBlockDRAM}} Bytes (DRAM) /
+      {{(messages$ | async)?.heap?.largestBlockPSRAM}} Bytes (PSRAM)
+    </app-status-card-line>
+  </mat-card-content>
+</mat-card>

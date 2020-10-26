@@ -1,0 +1,21 @@
+<mat-card class="status-card" *ngIf="messages$ | async">
+    <mat-card-title>Audio</mat-card-title>
+
+    <mat-card-content>
+        <app-status-card-line label="Wiedergabe:">
+            {{(messages$ | async)?.audio?.isPlaying ? 'ja' : 'nein'}}
+        </app-status-card-line>
+
+        <app-status-card-line label="Album:">
+            {{(messages$ | async)?.audio?.currentAlbum}}
+        </app-status-card-line>
+
+        <app-status-card-line label="Track:">
+            {{(messages$ | async)?.audio?.currentTrack}}
+        </app-status-card-line>
+
+        <app-status-card-line label="Lautstärke:">
+            {{(messages$ | async)?.audio?.volume}}
+        </app-status-card-line>
+    </mat-card-content>
+</mat-card>

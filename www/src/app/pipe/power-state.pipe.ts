@@ -4,7 +4,7 @@ import { PowerState } from '../model/message';
 
 @Pipe({ name: 'powerState' })
 export class PowerStatePipe implements PipeTransform {
-    transform(value: PowerState): string {
+    transform(value?: PowerState): string {
         switch (value) {
             case PowerState.charging:
                 return 'wird geladen';
@@ -14,6 +14,9 @@ export class PowerStatePipe implements PipeTransform {
 
             case PowerState.standby:
                 return 'Netz';
+
+            case undefined:
+                return '';
 
             default:
                 return 'invalid';

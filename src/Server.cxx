@@ -313,7 +313,7 @@ void startServer() {
     }
 
     httpd_uri_t uri_events = {
-        .uri = "/events", .method = HTTP_GET, .handler = requestHandler_events, .user_ctx = nullptr};
+        .uri = "/api/events", .method = HTTP_GET, .handler = requestHandler_events, .user_ctx = nullptr};
     httpd_register_uri_handler(httpd_handle, &uri_events);
 
     httpd_uri_t uri_root = {

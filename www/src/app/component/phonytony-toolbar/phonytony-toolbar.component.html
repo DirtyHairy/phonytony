@@ -1,0 +1,19 @@
+<mat-toolbar color="primary">
+  <button mat-icon-button type="button">
+    <mat-icon>menu</mat-icon>
+  </button>
+  <span>Adabox</span>
+  <span class="toolbar-spacer"></span>
+  <span class="time-remaining" (click)="onTimeRemainingClick()">1:30</span>
+  <mat-icon class="battery">battery_full</mat-icon>
+  <button mat-icon-button type="button" (click)="onPowerdownClick()">
+    <mat-icon>power_settings_new</mat-icon>
+  </button>
+</mat-toolbar>
+
+<ng-template #powerdownDialog>
+  <h1 mat-dialog-title>Ausschalten</h1>
+  <div mat-dialog-content class="powerdown-dialog-content">Wollen Sie Wifi stoppen oder die ganze Box ausschalten?</div>
+  <button type="button" mat-button (click)="onStopWifi()">Wifi stoppen</button>
+  <button type="button" mat-button (click)="onPoweroff()">Abschalten</button>
+</ng-template>
