@@ -372,11 +372,23 @@ void HTTPServer::stop() {
 
     isRunning = false;
 
-    sendUpdate();
-
     LOG_INFO(TAG, "server stopped");
 }
 
 void HTTPServer::sendUpdate() {
     if (isRunning) xTaskNotify(serverTaskHandle, 0, eNoAction);
+}
+
+void HTTPServer::closeConnections() {
+    if (!isRunning) return;
+
+    bool graceTime = false;
+
+    for (int i = 0; i < NUM_EVENT_SOCKETS; i++)
+        if (eventSockets[i] != -1) {
+            graceTime = true;
+            httpd_sess_trigger_close(httpd_handle, eventSockets[i]);
+        }
+
+    if (graceTime) delay(100);
 }

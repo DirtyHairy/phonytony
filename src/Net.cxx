@@ -151,6 +151,7 @@ void Net::start() {
 void Net::stop() {
     if (!isRunning) return;
 
+    HTTPServer::closeConnections();
     esp_wifi_stop();
 
     isRunning = false;
