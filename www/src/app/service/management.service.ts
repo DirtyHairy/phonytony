@@ -31,7 +31,7 @@ export class ManagementService {
     }
 
     public async powerdown(): Promise<void> {
-        await this.httpClient.post(`${environment.boxUrl}/api/powerdown`, null).toPromise();
+        await this.httpClient.post(`${environment.boxUrl}/api/poweroff`, null).toPromise();
     }
 
     public async stopWifi(): Promise<void> {

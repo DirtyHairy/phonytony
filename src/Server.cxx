@@ -10,6 +10,7 @@
 #include <esp_spiffs.h>
 #include <freertos/semphr.h>
 #include <freertos/task.h>
+#include <freertos/timers.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 
@@ -19,6 +20,7 @@
 #include "Audio.hxx"
 #include "Lock.hxx"
 #include "Log.hxx"
+#include "Net.hxx"
 #include "Power.hxx"
 #include "config.h"
 
@@ -47,6 +49,8 @@ const char *MIME_TYPE_ICO = "image/x-icon";
 const char *STATUS_SERVICE_UNAVAILABLE = "503 Service Unavailable";
 const char *STATUS_OK = "200 OK";
 const char *STATUS_MOVED_PERMANENTLY = "301 Moved Permanently";
+
+const char *ACCESS_CONTROL_ALLOW_ORIGIN = "Access-Control-Allow-Origin";
 
 const char *EVENT_TEMPLATE = "event: %s\r\ndata: %s\r\nretry: 1000\r\n\r\n";
 size_t EVENT_BASE_LEN = strlen(EVENT_TEMPLATE) - 4;
@@ -192,6 +196,33 @@ esp_err_t requestHandler_redirect(httpd_req_t *req) {
     return ESP_OK;
 }
 
+void poweroffTimer(TimerHandle_t) {
+    HTTPServer::closeConnections();
+    Power::deepSleep();
+}
+
+esp_err_t requestHandler_poweroff(httpd_req_t *req) {
+    xTimerStart(xTimerCreate("poweroff", 500, pdFALSE, nullptr, poweroffTimer), 0);
+
+    httpd_resp_set_status(req, STATUS_OK);
+    httpd_resp_set_hdr(req, ACCESS_CONTROL_ALLOW_ORIGIN, "*");
+    httpd_resp_send(req, nullptr, 0);
+
+    return ESP_OK;
+}
+
+void stopWifiTimer(TimerHandle_t) { Net::stop(); }
+
+esp_err_t requestHandler_stopWifi(httpd_req_t *req) {
+    xTimerStart(xTimerCreate("stopWifi", 500, pdFALSE, nullptr, stopWifiTimer), 0);
+
+    httpd_resp_set_status(req, STATUS_OK);
+    httpd_resp_set_hdr(req, ACCESS_CONTROL_ALLOW_ORIGIN, "*");
+    httpd_resp_send(req, nullptr, 0);
+
+    return ESP_OK;
+}
+
 void registerStaticFile(string name) {
     bool isGz = getSuffix(name) == ".gz";
     string normalizedName = isGz ? stripSuffix(name) : name;
@@ -319,6 +350,14 @@ void startServer() {
     httpd_uri_t uri_root = {
         .uri = "/", .method = HTTP_GET, .handler = requestHandler_redirect, .user_ctx = (void *)"/index.html"};
     httpd_register_uri_handler(httpd_handle, &uri_root);
+
+    httpd_uri_t uri_poweroff = {
+        .uri = "/api/poweroff", .method = HTTP_POST, .handler = requestHandler_poweroff, .user_ctx = nullptr};
+    httpd_register_uri_handler(httpd_handle, &uri_poweroff);
+
+    httpd_uri_t uri_stopWifi = {
+        .uri = "/api/stop-wifi", .method = HTTP_POST, .handler = requestHandler_stopWifi, .user_ctx = nullptr};
+    httpd_register_uri_handler(httpd_handle, &uri_stopWifi);
 
     registerStaticFiles();
 

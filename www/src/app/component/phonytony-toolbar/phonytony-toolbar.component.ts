@@ -1,5 +1,5 @@
 import { Component, TemplateRef, ViewChild } from '@angular/core';
-import { MatDialog, MatDialogRef } from '@angular/material/dialog';
+import { MatDialog, MatDialogRef, MatDialogState } from '@angular/material/dialog';
 
 import { ManagementService } from '../../service/management.service';
 
@@ -20,7 +20,7 @@ export class PhonytonyToolbarComponent {
     }
 
     public onPowerdownClick(): void {
-        if (this.powerdownDialogRef) {
+        if (this.isDialogOpen()) {
             return;
         }
 
@@ -43,5 +43,9 @@ export class PhonytonyToolbarComponent {
             this.powerdownDialogRef.close();
             this.powerdownDialogRef = undefined;
         }
+    }
+
+    private isDialogOpen(): boolean {
+        return !!this.powerdownDialogRef && this.powerdownDialogRef.getState() !== MatDialogState.CLOSED;
     }
 }
