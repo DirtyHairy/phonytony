@@ -133,15 +133,15 @@ void setup() {
     Net::initialize();
     HTTPServer::initialize();
 
+    if (!config.load()) {
+        LOG_WARN(TAG, "WARNING: failed to load configuration");
+    }
+
     Audio::start(silentStart);
     Gpio::start();
     Led::start();
     Power::start();
     Watchdog::start();
-
-    if (!config.load()) {
-        LOG_WARN(TAG, "WARNING: failed to load configuration");
-    }
 
     Rfid::start();
 
