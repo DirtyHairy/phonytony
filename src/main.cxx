@@ -88,7 +88,7 @@ void logBatteryState() {
 }
 
 void setup() {
-    setCpuFrequencyMhz(CPU_FREQUENCY);
+    setCpuFrequencyMhz(240);
 
     Log::initialize();
 
@@ -146,6 +146,8 @@ void setup() {
     Rfid::start();
 
     Log::enableSD();
+
+    setCpuFrequencyMhz(CPU_FREQUENCY);
 
     LOG_INFO(TAG, "DIP config %i", (int)Gpio::readConfigSwitches());
     delay(500);
