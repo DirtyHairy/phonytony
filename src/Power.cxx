@@ -18,9 +18,9 @@
 #include "Led.hxx"
 #include "Lock.hxx"
 #include "Log.hxx"
-#include "Net.hxx"
 #include "Rfid.hxx"
 #include "config.h"
+#include "net/Net.hxx"
 
 #define TAG "power"
 

@@ -8,7 +8,7 @@
 #include <memory>
 
 #include "Log.hxx"
-#include "PosixFile.h"
+#include "fs/VFS.h"
 
 #define TAG "json"
 
@@ -30,7 +30,7 @@ class SPIRamAllocator {
 using SPIRamJsonDocument = BasicJsonDocument<SPIRamAllocator>;
 
 bool JsonConfig::load() {
-    File configFile = PosixFile::open("/sdcard/config.json", "r");
+    File configFile = VFS.open("/sdcard/config.json", "r");
     if (!configFile) {
         LOG_WARN(TAG, "config.json not found");
         return false;

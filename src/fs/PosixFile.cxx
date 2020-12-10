@@ -1,5 +1,6 @@
 #include "PosixFile.h"
 
+#include <memory>
 #include <stdexcept>
 
 using namespace fs;

@@ -4,8 +4,8 @@
 
 #include "Audio.hxx"
 #include "Config.hxx"
-#include "Net.hxx"
 #include "Power.hxx"
+#include "net/Net.hxx"
 
 namespace Command {
 

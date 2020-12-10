@@ -5,7 +5,7 @@ CXX ?= g++
 CFLAGS ?= -O0 -g -fsanitize=undefined,address
 CXXFLAGS ?= $(CFLAGS) -std=c++11 -Wall -Werror
 
-INCLUDE = -I.
+INCLUDE = -I. -I../../src/fs
 
 SOURCE_C = \
 	stdlib_noniso.c
@@ -18,11 +18,8 @@ SOURCE_CC = \
 	Stream.cxx \
 	Print.cxx \
 	FS.cxx \
-	PosixFile.cxx \
-	PosixDirectory.cxx \
-	PosixFS.cxx \
-	Serial.cxx \
-	SD.cxx
+	../../src/fs/PosixFile.cxx \
+	Serial.cxx
 
 OBJECTS = $(SOURCE_C:.c=.o) $(SOURCE_CC:.cxx=.o)
 LIBRARY = libarduino_stub.a

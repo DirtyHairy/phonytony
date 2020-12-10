@@ -2,13 +2,12 @@
 
 // clang-format off
 #include <freertos/FreeRTOS.h>
-
 #include <mad.h>
 // clang-format on
 
-#include <esp_vfs_fat.h>
-#include <driver/sdspi_host.h>
 #include <SPI.h>
+#include <driver/sdspi_host.h>
+#include <esp_vfs_fat.h>
 #include <freertos/semphr.h>
 
 #include "Audio.hxx"
@@ -16,12 +15,12 @@
 #include "JsonConfig.hxx"
 #include "Led.hxx"
 #include "Log.hxx"
-#include "Net.hxx"
 #include "Power.hxx"
 #include "Rfid.hxx"
-#include "Server.hxx"
 #include "Watchdog.hxx"
 #include "config.h"
+#include "net/Net.hxx"
+#include "net/Server.hxx"
 
 static SPIClass spiVSPI(VSPI);
 static SPIClass spiHSPI(HSPI);
