@@ -2,6 +2,8 @@
 
 #include <Arduino.h>
 
+#include <iostream>
+
 #include "Log.hxx"
 
 #define TAG "mp3"
@@ -13,7 +15,7 @@ MadDecoder::~MadDecoder() { close(); }
 bool MadDecoder::open(const char* path) {
     if (initialized) close();
 
-    file = SD.open(path);
+    file = fopen(path, "r");
 
     if (!file) return false;
 
@@ -53,7 +55,7 @@ bool MadDecoder::reset(size_t seekPosition) {
     leadIn = true;
     eof = false;
 
-    file.seek(seekPosition);
+    fseek(file, seekPosition, SEEK_SET);
 
     return bufferChunk();
 }
@@ -72,8 +74,15 @@ bool MadDecoder::bufferChunk() {
         target = buffer + unused;
     }
 
-    size_t bytesRead = eof ? 0 : file.read(target, bytesToRead);
-    eof = eof || bytesRead < bytesToRead;
+    size_t bytesRead = 0;
+    while (!eof && bytesRead < bytesToRead) {
+        size_t r = fread(target + bytesRead, 1, bytesToRead - bytesRead, file);
+
+        if (r == 0)
+            eof = true;
+        else
+            bytesRead += r;
+    }
 
     if (eof) {
         while (bytesRead < bytesToRead && iBufferGuard++ < MAD_BUFFER_GUARD) target[bytesRead++] = 0;
@@ -177,7 +186,7 @@ void MadDecoder::close() {
     if (file) {
         LOG_DEBUG(TAG, "decoder closed after decoding %du bytes", file.position());
 
-        file.close();
+        fclose(file);
     }
 
     deinit();
@@ -189,6 +198,6 @@ void MadDecoder::rewind() { reset(); }
 
 uint32_t MadDecoder::getPosition() const { return totalSamples; }
 
-size_t MadDecoder::getSeekPosition() { return file ? file.position() : 0; }
+size_t MadDecoder::getSeekPosition() { return file ? ftell(file) : 0; }
 
 void MadDecoder::seekTo(uint32_t seekPosition) { reset(seekPosition > CHUNK_SIZE ? seekPosition - CHUNK_SIZE : 0); }

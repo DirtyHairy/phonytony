@@ -2,10 +2,13 @@
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
-#include <SD.h>
 #include <StreamUtils.h>
 
+#include <cstdio>
+#include <memory>
+
 #include "Log.hxx"
+#include "PosixFile.h"
 
 #define TAG "json"
 
@@ -27,16 +30,17 @@ class SPIRamAllocator {
 using SPIRamJsonDocument = BasicJsonDocument<SPIRamAllocator>;
 
 bool JsonConfig::load() {
-    File configFile = SD.open("/config.json");
+    File configFile = PosixFile::open("/sdcard/config.json", "r");
     if (!configFile) {
         LOG_WARN(TAG, "config.json not found");
         return false;
     }
 
     SPIRamJsonDocument configJson(configFile.size() * 2);
-    ReadBufferingStream stream(configFile, 64);
 
+    ReadBufferingStream stream(configFile, 64);
     DeserializationError err = deserializeJson(configJson, stream);
+
     configFile.close();
 
     if (err != DeserializationError::Ok) {

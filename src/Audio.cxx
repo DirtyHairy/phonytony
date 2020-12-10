@@ -8,6 +8,7 @@
 #include <freertos/queue.h>
 #include <freertos/semphr.h>
 #include <freertos/task.h>
+#include <cstring>
 
 #include <atomic>
 
@@ -155,7 +156,7 @@ void updatePlaybackState() {
     if (state.track != oldTrack) HTTPServer::sendUpdate();
 }
 
-std::string directoryForAlbum(const char* album) { return std::string("/music/") + std::string(album); }
+std::string directoryForAlbum(const char* album) { return std::string("/sdcard/music/") + std::string(album); }
 
 void play(const char* album) {
     Lock lock(stateMutex);

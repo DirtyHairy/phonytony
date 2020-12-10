@@ -1,11 +1,13 @@
 #ifndef MAD_DECODER_HXX
 #define MAD_DECODER_HXX
 
-#include <SD.h>
-#include <mad.h>
-
 #include <cstdint>
+#include <cstdio>
 #include <string>
+
+// clang-format off
+#include <mad.h>
+// clang-format on
 
 class MadDecoder {
    public:
@@ -42,7 +44,7 @@ class MadDecoder {
     void deinit();
 
    private:
-    File file;
+    FILE* file{nullptr};
     uint8_t buffer[CHUNK_SIZE];
 
     mad_stream stream;

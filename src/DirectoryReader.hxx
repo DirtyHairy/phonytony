@@ -1,8 +1,10 @@
 #ifndef DIRECTORY_READER_HXX
 #define DIRECTORY_READER_HXX
 
-#include <FS.h>
+#include <dirent.h>
 #include <stdint.h>
+
+#include <cstdio>
 
 class DirectoryReader {
    public:
@@ -25,9 +27,9 @@ class DirectoryReader {
 
     uint32_t length{0};
 
-    bool scanDirectory(File& root);
+    bool scanDirectory(DIR* root, const char* dirname);
 
-    bool readIndex(File& index);
+    bool readIndex(FILE* index);
 
     void writeIndex(const char* path) const;
 

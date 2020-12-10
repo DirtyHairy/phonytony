@@ -1,10 +1,12 @@
 #include "DirectoryReader.hxx"
 
-#include <SD.h>
+#include <Arduino.h>
 
 #include <algorithm>
+#include <cstring>
 #include <string>
 
+#include "Guard.hxx"
 #include "Log.hxx"
 
 #define TAG "reader"
@@ -19,16 +21,7 @@ bool isMp3(const char* name) {
     return true;
 }
 
-const char* filename(const char* name) {
-    const char* lastSlash = strrchr(name, '/');
-
-    return lastSlash ? lastSlash + 1 : name;
-}
-
 bool compareFilenames(const char* n1, const char* n2) {
-    n1 = filename(n1);
-    n2 = filename(n2);
-
     char* l1;
     char* l2;
 
@@ -42,11 +35,14 @@ bool compareFilenames(const char* n1, const char* n2) {
     return i1 < i2;
 }
 
-template <typename T>
-T filename(T path) {
-    T slash = strrchr(path, '/');
+bool isDir(const std::string& name) {
+    DIR* dir = opendir(name.c_str());
 
-    return *(slash + 1) ? (slash + 1) : path;
+    if (!dir) return false;
+
+    closedir(dir);
+
+    return true;
 }
 
 }  // namespace
@@ -59,16 +55,19 @@ bool DirectoryReader::open(const char* dirname) {
     close();
 
     std::string indexPath = std::string(dirname) + "/index";
-    File index = SD.open(indexPath.c_str(), "r");
+    FILE* index = fopen(indexPath.c_str(), "r");
 
     if (index) {
+        Guard guard([=]() { fclose(index); });
+
         if (!readIndex(index)) return false;
     } else {
-        File root = SD.open(dirname);
-
+        DIR* root = opendir(dirname);
         if (!root) return false;
 
-        if (!scanDirectory(root)) return false;
+        Guard guard([=]() { closedir(root); });
+
+        if (!scanDirectory(root, dirname)) return false;
 
         writeIndex(indexPath.c_str());
     }
@@ -78,29 +77,26 @@ bool DirectoryReader::open(const char* dirname) {
     return true;
 }
 
-bool DirectoryReader::scanDirectory(File& root) {
-    if (!root.isDirectory()) {
-        root.close();
+bool DirectoryReader::scanDirectory(DIR* root, const char* dirname) {
+    if (!root) {
         return false;
     }
 
     size_t bufferSize = 0;
-    File file;
+    struct dirent* entry;
 
-    while ((file = root.openNextFile())) {
-        if (file.isDirectory()) continue;
+    while ((entry = readdir(root))) {
+        if (isDir(std::string(dirname) + "/" + std::string(entry->d_name))) continue;
 
-        const char* name = filename(file.name());
+        if (!isMp3(entry->d_name)) continue;
 
-        if (!isMp3(file.name())) continue;
-
-        bufferSize += (strlen(name) + 1);
+        bufferSize += (strlen(entry->d_name) + 1);
         length++;
     }
 
     if (length == 0) return true;
 
-    root.rewindDirectory();
+    rewinddir(root);
 
     buffer = (char*)ps_malloc(bufferSize);
     playlist = (char**)ps_malloc(length * sizeof(char*));
@@ -108,28 +104,34 @@ bool DirectoryReader::scanDirectory(File& root) {
     char* buf = buffer;
     uint32_t i = 0;
 
-    while ((file = root.openNextFile())) {
-        if (file.isDirectory()) continue;
+    while ((entry = readdir(root))) {
+        if (isDir(std::string(dirname) + "/" + std::string(entry->d_name))) continue;
 
-        const char* name = filename(file.name());
+        if (!isMp3(entry->d_name)) continue;
 
-        if (!isMp3(name)) continue;
-
-        strcpy(buf, name);
+        strcpy(buf, entry->d_name);
 
         playlist[i++] = buf;
-        buf += (strlen(name) + 1);
+        buf += (strlen(entry->d_name) + 1);
     }
 
     return true;
 }
 
-bool DirectoryReader::readIndex(File& index) {
-    size_t bufferSize = index.size() + 1;
+bool DirectoryReader::readIndex(FILE* index) {
+    fseek(index, 0, SEEK_END);
+    size_t bufferSize = ftell(index) + 1;
+    fseek(index, 0, SEEK_SET);
 
     buffer = (char*)ps_malloc(bufferSize);
-    index.readBytes(buffer, bufferSize - 1);
-    index.close();
+
+    size_t bytesRead = 0;
+    while (bytesRead < bufferSize - 1) {
+        size_t r = fread(buffer + bytesRead, 1, bufferSize - 1 - bytesRead, index);
+        if (r == 0) break;
+
+        bytesRead += r;
+    }
 
     char lastChar = 0;
     buffer[bufferSize - 1] = 0;
@@ -158,12 +160,15 @@ bool DirectoryReader::readIndex(File& index) {
 }
 
 void DirectoryReader::writeIndex(const char* path) const {
-    File index = SD.open(path, "w");
+    FILE* index = fopen(path, "w");
     if (!index) return;
 
-    for (uint32_t i = 0; i < length; i++) index.println(playlist[i]);
+    for (uint32_t i = 0; i < length; i++) {
+        fputs(playlist[i], index);
+        fputs("\r\n", index);
+    }
 
-    index.close();
+    fclose(index);
 }
 
 void DirectoryReader::close() {

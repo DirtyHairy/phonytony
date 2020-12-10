@@ -155,6 +155,7 @@ void shutdownTask(void*) {
     Rfid::stop();
     Net::prepareSleep();
     Gpio::prepareSleep();
+    Log::prepareSleep();
 
     esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
     esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
@@ -162,6 +163,7 @@ void shutdownTask(void*) {
     esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_ON);
 
     esp_sleep_enable_ext1_wakeup(static_cast<uint64_t>(1) << (PIN_WAKEUP - GPIO_NUM_32 + 32), ESP_EXT1_WAKEUP_ANY_HIGH);
+
     esp_deep_sleep_start();
 }
 

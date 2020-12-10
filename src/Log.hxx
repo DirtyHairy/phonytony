@@ -61,6 +61,8 @@ void initialize();
 
 void enableSD();
 
+void prepareSleep();
+
 }  // namespace Log
 
 #endif  // LOG_HXX

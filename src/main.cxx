@@ -6,7 +6,8 @@
 #include <mad.h>
 // clang-format on
 
-#include <SD.h>
+#include <esp_vfs_fat.h>
+#include <driver/sdspi_host.h>
 #include <SPI.h>
 #include <freertos/semphr.h>
 
@@ -30,7 +31,24 @@ static JsonConfig config;
 #define TAG "main"
 
 bool setupSd() {
-    if (!SD.begin(PIN_SD_CS, spiVSPI, SPI_FREQ_SD)) {
+    sdmmc_host_t host = SDSPI_HOST_DEFAULT();
+    sdspi_slot_config_t slot_config = SDSPI_SLOT_CONFIG_DEFAULT();
+
+    host.slot = VSPI_HOST;
+    host.max_freq_khz = 80000;
+
+    slot_config.gpio_cs = PIN_SD_CS;
+    slot_config.gpio_sck = GPIO_NUM_18;
+    slot_config.gpio_miso = GPIO_NUM_19;
+    slot_config.gpio_mosi = GPIO_NUM_23;
+
+    esp_vfs_fat_sdmmc_mount_config_t mount_config = {
+        .format_if_mount_failed = false, .max_files = 5, .allocation_unit_size = 16 * 1024};
+
+    sdmmc_card_t* card;
+    esp_err_t ret = esp_vfs_fat_sdmmc_mount("/sdcard", &host, &slot_config, &mount_config, &card);
+
+    if (ret != ESP_OK) {
         LOG_ERROR(TAG, "Failed to initialize SD");
         return false;
     }
