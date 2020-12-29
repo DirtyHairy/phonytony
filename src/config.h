@@ -1,4 +1,4 @@
-#define LOG_TO_SD
+// #define LOG_TO_SD
 #define LOG_LEVEL LOG_LEVEL_INFO
 
 #define PIN_SD_CS GPIO_NUM_5
